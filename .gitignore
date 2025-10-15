@@ -22,7 +22,6 @@ pnpm-debug.log*
 !backend/.env.example
 
 # Datos locales
-uploads/*
 db/*
 ollama/
 !ollama/README.md
