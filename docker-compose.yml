@@ -1,0 +1,67 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:15
+    container_name: ia-db
+    restart: always
+    environment:
+      POSTGRES_USER: iacapital
+      POSTGRES_PASSWORD: supersegura
+      POSTGRES_DB: iacapital_db
+    volumes:
+      - ./db:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ia-ollama
+    restart: always
+    ports:
+      - "11434:11434"
+    volumes:
+      - ./ollama:/root/.ollama
+
+  backend:
+    build:
+      context: ./backend
+    container_name: ia-backend
+    restart: always
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+      - ./uploads:/app/uploads
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_USER: iacapital
+      DB_PASSWORD: supersegura
+      DB_NAME: iacapital_db
+      JWT_SECRET: supersecret_en_env
+      OLLAMA_HOST: http://ollama:11434
+      OLLAMA_MODEL: llama3.1:8b-instruct-q4_K_M
+      AI_MAX_TOKENS: "512"
+      AI_TEMPERATURE: "0.5"
+    depends_on:
+      - db
+      - ollama
+    ports:
+      - "5000:5000"
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: ia-frontend
+    restart: always
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:5000
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+    command: npm run dev

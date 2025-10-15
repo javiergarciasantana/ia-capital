@@ -1,0 +1,563 @@
+/* =========================
+   Tokens (misma línea visual)
+   ========================= */
+:root {
+  --bg: #f8f9fa;
+  --ink: #1b263b;
+  --ink-2: #003b5c;
+  --accent: #2e8b57;
+  --panel: #fff;
+  --border: #003b5c;
+  /* azul petróleo */
+  --muted: #e9edf1;
+  /* gris suave para placeholders */
+}
+
+/* =========================
+   Página
+   ========================= */
+.dashboard-container {
+  font-family: 'Segoe UI', sans-serif;
+  background-color: var(--bg);
+  min-height: 100vh;
+  padding: 1rem;
+  position: relative;
+  max-width: 1400px;
+  /* centrado elegante en desktop */
+  margin: 0 auto;
+}
+
+/* =========================
+   Header
+   ========================= */
+.logo {
+  background-color: #e0e0e0;
+  padding: .3rem .6rem;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.dashboard-header {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  /* móvil: izq | centro | der */
+  align-items: center;
+  margin-bottom: 1rem;
+  column-gap: .75rem;
+}
+
+.page-title {
+  justify-self: center;
+  font-family: 'Merriweather', serif;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--ink);
+  margin: 0;
+  letter-spacing: .3px;
+}
+
+.dashboard-header> :last-child {
+  justify-self: end;
+}
+
+/* MobileMenu */
+
+/* Overlay menú móvil (sin cambios funcionales) */
+.mobile-menu {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: #fff;
+  padding: 2rem 1rem;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, .15);
+  z-index: 10;
+}
+
+.mobile-menu ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.mobile-menu li {
+  padding: .75rem 0;
+  border-bottom: 1px solid #dfe5ea;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+
+/* =========================
+   Main (mobile-first)
+   ========================= */
+.dashboard-main {
+  display: grid;
+  grid-template-columns: 1fr;
+  /* columna única en móvil */
+  gap: 1rem;
+}
+
+/* =========================
+   Cards genéricas y utilidades
+   ========================= */
+.card {
+  background: var(--panel);
+  border-radius: 12px;
+  padding: 1rem;
+  border: 1px solid var(--border);
+}
+
+.card-title {
+  font-weight: 800;
+  color: var(--ink);
+  margin-bottom: .35rem;
+}
+
+.card-number {
+  color: var(--accent);
+  font-size: 24px;
+  font-weight: 800;
+  margin-bottom: 1rem;
+}
+
+.card-placeholder {
+  background: var(--muted);
+  border-radius: 6px;
+  margin-bottom: .6rem;
+}
+
+.card-placeholder.line {
+  width: 100%;
+  height: 12px;
+}
+
+.card-placeholder.line.short {
+  width: 60%;
+}
+
+.card-placeholder.circle {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  margin-bottom: 1rem;
+}
+
+/* Grid de widgets (móvil: 1 col) */
+.card-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+.small-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 104px;
+  padding-bottom: .5rem;
+}
+
+.card.small-card {
+  cursor: pointer;
+  transition: background-color .2s ease;
+}
+
+.card.small-card:hover {
+  background-color: #eef4f8;
+}
+
+.go-link {
+  margin-top: auto;
+  font-size: 12px;
+  color: var(--ink-2);
+  text-align: right;
+  cursor: pointer;
+}
+
+.doc-title {
+  font-size: .95rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--ink-2);
+  margin-bottom: .3rem;
+}
+
+.highlighted-card {
+  border: 2px solid var(--accent);
+  background: #f0fdf5;
+  transition: all .3s ease;
+}
+
+/* =========================
+   PROFIT CARD
+   ========================= */
+.profit-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1rem;
+  display: grid;
+  grid-template-columns: 1fr 140px;
+  /* texto | gráfica */
+  gap: 14px;
+  align-items: center;
+}
+
+.profit-left {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.profit-total {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--accent);
+  letter-spacing: .3px;
+}
+
+.profit-tabs {
+  display: inline-flex;
+  gap: 6px;
+  background: #f2f6f9;
+  border: 1px solid #d7e1ea;
+  border-radius: 10px;
+  padding: 4px;
+  width: max-content;
+}
+
+.profit-tab {
+  border: none;
+  background: transparent;
+  padding: 6px 10px;
+  border-radius: 8px;
+  color: var(--ink-2);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.profit-tab.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.profit-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.profit-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.profit-bank {
+  color: var(--ink);
+}
+
+.profit-amount {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.profit-item.empty {
+  color: #7a7a7a;
+  font-style: italic;
+}
+
+.profit-right {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.pie-wrap {
+  width: 100%;
+  max-width: 120px;
+  aspect-ratio: 1/1;
+}
+
+.pie-wrap canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+@media (min-width:480px) {
+  .profit-card {
+    grid-template-columns: 1fr 180px;
+  }
+
+  .pie-wrap {
+    max-width: 160px;
+  }
+}
+
+/* Tabla bajo la ProfitCard */
+.profit-table {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: .75rem;
+}
+
+.profit-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.profit-table th,
+.profit-table td {
+  padding: 10px 8px;
+  border-bottom: 1px solid #eaeaea;
+  text-align: left;
+  color: var(--ink);
+}
+
+.profit-table th {
+  font-weight: 800;
+}
+
+/* =========================
+   Mejoras para móviles medianos
+   ========================= */
+@media (min-width:640px) {
+  .card-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  /* 2 columnas para widgets */
+}
+
+/* ====== DESKTOP (≥1024px) ====== */
+@media (min-width: 1024px) {
+
+  /* Header */
+  .dashboard-header {
+    grid-template-columns: auto 1fr auto;
+  }
+
+  .page-title {
+    justify-self: start;
+    font-size: 24px;
+  }
+
+  /* Layout principal:
+     Fila 1 -> ProfitCard (izq) + Widgets (der)
+     Fila 2 -> Tabla a DOS columnas (sin huecos) */
+  .dashboard-main {
+    grid-template-columns: 2.15fr 1fr;
+    grid-template-areas:
+      "profit side"
+      "table  table";
+    /* 👈 la tabla ocupa todo el ancho */
+    align-items: start;
+    gap: 1.25rem;
+  }
+
+  .dashboard-main>.profit-card {
+    grid-area: profit;
+  }
+
+  .dashboard-main>.profit-table {
+    grid-area: table;
+  }
+
+  .dashboard-main>.card-grid {
+    grid-area: side;
+  }
+
+  /* Widgets derecha */
+  .card-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+    align-self: start;
+    /* no estira para abajo */
+  }
+
+  .small-card {
+    min-height: 132px;
+  }
+
+  /* ProfitCard más cómoda */
+  .profit-card {
+    padding: 1.25rem;
+    grid-template-columns: 1fr 220px;
+  }
+
+  .pie-wrap {
+    max-width: 200px;
+  }
+
+  .profit-table {
+    padding: 1rem;
+  }
+}
+
+/* =========================
+   XL (≥1280px)
+   ========================= */
+@media (min-width:1280px) {
+  .dashboard-container {
+    padding: 2rem;
+  }
+
+  .page-title {
+    font-size: 26px;
+  }
+
+  .profit-card {
+    grid-template-columns: 1fr 260px;
+  }
+
+  .pie-wrap {
+    max-width: 240px;
+  }
+}
+
+/* Mostrar info extra SOLO en escritorio */
+.only-desktop {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .only-desktop {
+    display: table-cell;
+  }
+
+  .profit-table tfoot.only-desktop {
+    display: table-footer-group;
+  }
+}
+
+/* Barra de participación dentro de la celda */
+.sharebar {
+  position: relative;
+  height: 10px;
+  background: #eef4f8;
+  border-radius: 999px;
+  overflow: hidden;
+  min-width: 160px;
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: .5rem;
+}
+
+.sharebar>span {
+  position: absolute;
+  inset: 0;
+  width: 0;
+  /* se sobreescribe inline con el % */
+  background: linear-gradient(90deg, #2e8b57, #1f7b52);
+  border-radius: 999px;
+}
+
+.sharebar-label {
+  font-weight: 700;
+  color: #1b263b;
+  font-size: .95rem;
+  vertical-align: middle;
+}
+
+/* Header dentro de la tarjeta + CTA a la derecha */
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: .25rem;
+}
+
+.card-cta {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--ink-2);
+  font-weight: 700;
+  padding: .4rem .7rem;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.card-cta:hover {
+  background: #eef4f8;
+}
+
+/* Columna de acción (solo desktop, ya usamos .only-desktop) */
+.action-col {
+  text-align: right;
+  white-space: nowrap;
+  width: 1%;
+}
+
+.link-btn {
+  background: transparent;
+  border: none;
+  color: var(--ink-2);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.link-btn:hover {
+  text-decoration: underline;
+}
+
+/* Visible solo en escritorio */
+.only-desktop {
+  display: none;
+}
+
+@media (min-width:1024px) {
+  .only-desktop {
+    display: table-cell;
+  }
+
+  .profit-table tfoot.only-desktop {
+    display: table-footer-group;
+  }
+}
+
+/* Barra de participación */
+.sharebar {
+  position: relative;
+  height: 10px;
+  background: #eef4f8;
+  border-radius: 999px;
+  overflow: hidden;
+  min-width: 160px;
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: .5rem;
+}
+
+.sharebar>span {
+  position: absolute;
+  inset: 0;
+  width: 0;
+  background: linear-gradient(90deg, #2e8b57, #1f7b52);
+  border-radius: 999px;
+}
+
+.sharebar-label {
+  font-weight: 700;
+  color: #1b263b;
+  font-size: .95rem;
+  vertical-align: middle;
+}
+
+.table-link {
+  background: none;
+  border: none;
+  color: #003b5c;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+}
+
+.table-link:hover {
+  text-decoration: underline;
+}

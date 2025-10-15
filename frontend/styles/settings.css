@@ -1,0 +1,136 @@
+/* styles/settings.css */
+
+.settings-container {
+  font-family: 'Segoe UI', sans-serif;
+  background-color: #f8f9fa;
+  min-height: 100vh;
+  padding: 1rem;
+  position: relative;
+}
+
+.settings-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.logo {
+  background-color: #e0e0e0;
+  padding: 0.3rem 0.6rem;
+  border-radius: 4px;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.settings-header h1 {
+  font-size: 20px;
+  color: #1b263b;
+  margin: 0;
+}
+
+.menu-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.mobile-menu {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  background: white;
+  padding: 2rem 1rem;
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+  z-index: 10;
+}
+
+.mobile-menu ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.mobile-menu li {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #ccc;
+  font-weight: bold;
+  color: #003b5c;
+}
+
+.mobile-menu a {
+  text-decoration: none;
+  color: #003b5c;
+}
+
+.settings-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.form-section label {
+  display: block;
+  margin-bottom: 1rem;
+}
+
+.form-section span {
+  display: block;
+  font-weight: bold;
+  color: #1b263b;
+  margin-bottom: 0.3rem;
+}
+
+.input-placeholder {
+  width: 100%;
+  height: 16px;
+  background-color: #cfcfcf;
+  border-bottom: 2px solid #1b263b;
+  border-radius: 2px;
+}
+
+.preferences-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.section-title {
+  font-weight: bold;
+  color: #1b263b;
+  margin-bottom: 0.5rem;
+}
+
+.theme-options {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #003b5c;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.theme-options label {
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 14px;
+}
+
+.theme-options input[type='radio'] {
+  accent-color: #2e8b57;
+}
+
+.theme-options label.active {
+  background-color: #e6f5ec;
+  font-weight: bold;
+}
+
+.language-section select {
+  padding: 0.4rem;
+  border: 1px solid #003b5c;
+  border-radius: 4px;
+}

@@ -1,0 +1,156 @@
+/* ====== Página / fondo ====== */
+.login-wrapper {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: #f8f9fa;
+  padding: 2rem;
+  font-family: 'Segoe UI', sans-serif;
+  overflow-x: hidden;
+}
+
+/* Contenedor relativo para posicionar la ilustración */
+.login-shell {
+  position: relative;
+  width: 100%;
+  max-width: 1200px;
+  min-height: 560px;
+  /* un pelín más alto para permitir solape */
+  margin: 0 auto;
+}
+
+/* ====== Card ====== */
+.login-card {
+  position: relative;
+  z-index: 2;
+  /* por encima de la ilustración */
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  /* centrado en móvil */
+  background-color: #fff;
+  padding: 2.5rem;
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  text-align: center;
+}
+
+.login-title {
+  font-size: 2rem;
+  color: #1b263b;
+  margin-bottom: 0.5rem;
+}
+
+.login-subtitle {
+  color: #003b5c;
+  font-size: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.login-form {
+  text-align: left;
+}
+
+.login-form label {
+  display: block;
+  margin-bottom: 1.5rem;
+  color: #1B263B;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.login-form input {
+  width: 100%;
+  padding: 0.75rem;
+  font-size: 1rem;
+  border: 2px solid #003B5C;
+  border-radius: 8px;
+  margin-top: 0.5rem;
+  outline: none;
+  transition: border-color 0.2s ease-in-out;
+}
+
+.login-form input:focus {
+  border-color: #2E8B57;
+  box-shadow: 0 0 0 2px rgba(46, 139, 87, 0.2);
+}
+
+.login-form button {
+  width: 100%;
+  padding: 0.9rem;
+  background-color: #003B5C;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: bold;
+  border: none;
+  border-radius: 10px;
+  margin-top: 0.5rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
+}
+
+.login-form button:hover {
+  background-color: #002a42;
+}
+
+.login-form button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.login-error {
+  color: #c62828;
+  background-color: #ffeaea;
+  padding: 0.8rem;
+  border-radius: 6px;
+  text-align: center;
+  margin-top: 1rem;
+  font-size: 0.95rem;
+}
+
+.forgot-password {
+  margin-top: 1rem;
+  font-size: 0.95rem;
+  color: #2E8B57;
+  cursor: pointer;
+}
+
+.forgot-password:hover {
+  text-decoration: underline;
+}
+
+/* ====== Ilustración: oculta por defecto (mobile-first) ====== */
+.login-art {
+  display: none;
+}
+
+/* ====== Desktop ≥1024px ====== */
+@media (min-width: 1024px) {
+  .login-card {
+    margin-left: clamp(60px, 8vw, 160px);
+    transform: translateX(4%);
+  }
+
+  /* Ilustración grande, centrada verticalmente y con solape */
+  .login-art {
+    display: block;
+    position: absolute;
+    top: 50%;
+    left: 58%;
+    transform: translate(-50%, -50%);
+    width: clamp(600px, 55vw, 860px);
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .login-art img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 14px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+}

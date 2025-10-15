@@ -1,0 +1,34 @@
+# Node & build
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+.next/
+**/.next/
+out/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# Envs (no subir secretos)
+.env
+.env.*
+!.env.example
+!frontend/.env.local.example
+!backend/.env.example
+
+# Datos locales
+uploads/
+db/
+ollama/
+!ollama/README.md
+
+# Editor/OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
