@@ -13,8 +13,7 @@ COPY . .
 RUN npm run build
 
 # Dejar solo deps de producción y comprobar que existe dist/main.js
-RUN npm prune --omit=dev \
- && test -f dist/main.js || (echo "❌ No se generó dist/main.js" && ls -la dist && exit 1)
+RUN npm prune --omit=dev && test -f dist/main.js
 
 # ---------- Runtime stage ----------
 FROM node:20-slim AS runner
