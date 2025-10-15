@@ -1,23 +1,49 @@
+// backend/src/main.ts
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 import { ValidationPipe } from '@nestjs/common';
 
+function parseOrigins(): string[] {
+  // Admite: CORS_ORIGINS="https://app.com,https://admin.app.com"
+  // o FRONTEND_ORIGIN="https://app.com"
+  const fromList =
+    (process.env.CORS_ORIGINS || '')
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
+
+  const single = (process.env.FRONTEND_ORIGIN || '').trim();
+
+  // Soporte a tus variables actuales:
+  const dev = process.env.CORS_ORIGIN_DEV || 'http://localhost:3000';
+  const prod = (process.env.CORS_ORIGIN_PROD || '').trim();
+
+  return [dev, prod, single, ...fromList]
+    .filter((v, i, a) => v && a.indexOf(v) === i);
+}
+
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  const allowedOrigins = [
-    process.env.CORS_ORIGIN_DEV ?? 'http://localhost:3000',
-    process.env.CORS_ORIGIN_PROD ?? undefined,
-  ].filter((v): v is string => typeof v === 'string' && v.length > 0);
+  const port = parseInt(process.env.PORT || '5000', 10); // Render define PORT
 
+  const allowedOrigins = parseOrigins();
+
+  // CORS seguro para lista de orígenes y útil para Postman/healthchecks (origin null)
   app.enableCors({
-    origin: allowedOrigins,   // <- ahora es string[]
+    origin: (origin, cb) => {
+      if (!origin) return cb(null, true); // curl, Postman, SSR interno
+      const ok = allowedOrigins.includes(origin);
+      cb(ok ? null : new Error(`CORS blocked for origin: ${origin}`), ok);
+    },
     credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
   });
 
-  // ✅ Servir archivos estáticos desde ./uploads
+  // Archivos estáticos (Render: monta un Disk en /app/uploads)
   app.useStaticAssets(join(process.cwd(), 'uploads'), {
     prefix: '/uploads/',
   });
@@ -28,7 +54,6 @@ async function bootstrap() {
     transform: true,
   }));
 
-
-  await app.listen(5000, '0.0.0.0');
+  await app.listen(port, '0.0.0.0');
 }
 bootstrap();
