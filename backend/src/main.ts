@@ -1,4 +1,3 @@
-// backend/src/main.ts
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
@@ -27,9 +26,14 @@ function parseOrigins(): string[] {
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  const port = parseInt(process.env.PORT || '5000', 10); // Render define PORT
+  const port = parseInt(process.env.PORT || '5000', 10);
 
   const allowedOrigins = parseOrigins();
+
+  const allowed = (process.env.FRONTEND_ORIGIN || 'http://localhost:3000')
+    .split(',').map(s => s.trim());
+  app.enableCors({ origin: allowed, credentials: true });
+  await app.listen(port, '0.0.0.0');
 
   // CORS seguro para lista de orígenes y útil para Postman/healthchecks (origin null)
   app.enableCors({

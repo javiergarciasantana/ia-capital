@@ -1,16 +1,26 @@
-FROM node:18
-
+# ---- Build ----
+FROM node:18-alpine AS builder
 WORKDIR /app
-
-# Copiamos solo los archivos necesarios para instalar primero
 COPY package*.json ./
-
-# Instalamos dentro del contenedor para Linux (¡clave!)
-RUN npm install
-
-# Luego copiamos el resto del código (después de npm install)
+RUN npm ci
 COPY . .
 
-EXPOSE 3000
+# => ARGs que vendrán de Easypanel (Build Args)
+ARG NEXT_PUBLIC_API_BASE
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_BASE=$NEXT_PUBLIC_API_BASE
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
-CMD ["npm", "run", "dev"]
+RUN npm run build
+
+# ---- Runtime ----
+FROM node:18-alpine AS runner
+WORKDIR /app
+ENV NODE_ENV=production
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/package*.json ./
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/next.config.js ./next.config.js
+EXPOSE 3000
+CMD ["npm","start"]
