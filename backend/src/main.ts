@@ -11,7 +11,7 @@ function parseOrigins(): string[] {
   //  - CORS_ORIGINS="https://app.com,https://admin.app.com"
   //  - CORS_ORIGIN_DEV / CORS_ORIGIN_PROD
   const list = [
-    (process.env.CORS_ORIGIN_DEV || '/api:3000').trim(),
+    (process.env.CORS_ORIGIN_DEV || 'http://localhost:3000').trim(), // ← antes ponía "/api:3000" (inválido)
     (process.env.CORS_ORIGIN_PROD || '').trim(),
     ...(process.env.FRONTEND_ORIGIN || '')
       .split(',')
@@ -29,15 +29,16 @@ async function bootstrap() {
     bufferLogs: true,
   });
 
+  // ⬇⬇⬇ AÑADE EL PREFIJO GLOBAL /api
+  app.setGlobalPrefix('api');
+
   const port = parseInt(process.env.PORT || '5000', 10);
   const allowedOrigins = parseOrigins();
 
   // Archivos estáticos (PDFs)
-  app.useStaticAssets(join(process.cwd(), 'uploads'), {
-    prefix: '/uploads/',
-  });
+  app.useStaticAssets(join(process.cwd(), 'uploads'), { prefix: '/uploads/' });
 
-  // CORS (una sola vez)
+  // CORS
   app.enableCors({
     origin: (origin, cb) => {
       if (!origin) return cb(null, true); // curl/Postman/healthchecks
