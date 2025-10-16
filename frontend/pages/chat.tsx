@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 type Role = 'system' | 'user' | 'assistant';
 type Msg = { role: Role; content: string };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api:5000';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 // Limpieza ligera durante el stream (evita eco visual)
 function liveSanitize(s: string) {

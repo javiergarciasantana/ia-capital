@@ -28,7 +28,7 @@ type ProfileForm = {
 
 export default function AdminUsers() {
   const router = useRouter();
-  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || '/api:5000';
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || '/api';
   const { auth } = useAuth();
 
   const [users, setUsers] = useState<any[]>([]);

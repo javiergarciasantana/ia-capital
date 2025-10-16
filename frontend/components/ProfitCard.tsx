@@ -20,7 +20,7 @@ type FileItem = {
     user?: { id: number };
 };
 
-const API = process.env.NEXT_PUBLIC_API_BASE || '/api:5000';
+const API = process.env.NEXT_PUBLIC_API_BASE || '/api';
 
 function toNumber(v: unknown): number {
     if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
