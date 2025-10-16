@@ -5,7 +5,7 @@ import '../styles/documents.css';
 import '../styles/documentsManager.css';
 import '../styles/globals.css';
 import '../styles/login.css';
-import '../styles/MovileMenu.module.css';
+import '../styles/MobileMenu.module.css';
 import '../styles/reports.css';
 import '../styles/settings.css';
 
