@@ -11,7 +11,7 @@ function parseOrigins(): string[] {
   //  - CORS_ORIGINS="https://app.com,https://admin.app.com"
   //  - CORS_ORIGIN_DEV / CORS_ORIGIN_PROD
   const list = [
-    (process.env.CORS_ORIGIN_DEV || 'http://localhost:3000').trim(),
+    (process.env.CORS_ORIGIN_DEV || '/api:3000').trim(),
     (process.env.CORS_ORIGIN_PROD || '').trim(),
     ...(process.env.FRONTEND_ORIGIN || '')
       .split(',')

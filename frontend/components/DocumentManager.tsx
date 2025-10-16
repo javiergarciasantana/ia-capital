@@ -30,7 +30,7 @@ export default function DocumentManager() {
   const [year, setYear] = useState('');
   const [bank, setBank] = useState('BBVA');
 
-  const API_BASE = 'http://localhost:5000';
+  const API_BASE = '/api:5000';
   const router = useRouter();
   const { auth } = useAuth();
 

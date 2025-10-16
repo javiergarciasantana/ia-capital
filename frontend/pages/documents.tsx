@@ -44,7 +44,7 @@ export default function DocumentManager() {
   const [editingDoc, setEditingDoc] = useState<FileItem | null>(null);
   const [showModal, setShowModal] = useState(false);
 
-  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5000';
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || '/api:5000';
   const router = useRouter();
   const { auth } = useAuth();
   const token = auth?.token;

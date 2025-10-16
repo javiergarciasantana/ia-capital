@@ -6,7 +6,7 @@ type OllamaChunk =
 
 @Injectable()
 export class OllamaClient {
-  private host = process.env.OLLAMA_HOST || 'http://localhost:11434';
+  private host = process.env.OLLAMA_HOST || '/api:11434';
   private model = process.env.OLLAMA_MODEL || 'llama3.1:8b-instruct-q4_K_M';
 
   async *chatStream(

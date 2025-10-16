@@ -18,7 +18,7 @@ function Dashboard() {
   const [highlight, setHighlight] = useState(false);
   const { auth } = useAuth();
   const router = useRouter();
-  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5000';
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || '/api:5000';
 
   useEffect(() => {
     if (!auth?.token) return;
