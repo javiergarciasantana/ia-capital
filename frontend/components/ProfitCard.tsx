@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import Chart from 'chart.js/auto';
 import { useAuth } from '../context/AuthContext';
-import '../styles/dashboard.css';
 
 type BankRow = { key: string; total: string | number };
 type MonthRow = { key: string; year: number; total: string | number };
