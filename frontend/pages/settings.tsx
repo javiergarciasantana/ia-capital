@@ -1,6 +1,4 @@
 import { useState } from 'react';
-import '../styles/globals.css';
-import '../styles/settings.css';
 import Header from '../components/Header';
 import { withAuth } from '../utils/withAuth';
 

@@ -1,6 +1,3 @@
-// frontend/pages/chat.tsx
-import '../styles/globals.css';
-import '../styles/chat.css';
 import Header from '../components/Header';
 import { withAuth } from '../utils/withAuth';
 import { useAuth } from '../context/AuthContext';

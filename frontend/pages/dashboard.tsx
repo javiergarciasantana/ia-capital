@@ -5,9 +5,6 @@ import { useAuth } from '../context/AuthContext';
 import Header from '../components/Header';
 import ProfitCard from '../components/ProfitCard';
 
-import '../styles/globals.css';
-import '../styles/dashboard.css';
-
 type FileItem = {
   id: number;
   title?: string;

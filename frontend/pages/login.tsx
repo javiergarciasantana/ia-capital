@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
-import '../styles/globals.css';
-import '../styles/login.css';
 import { useAuth } from '../context/AuthContext';
 
 export default function LoginPage() {

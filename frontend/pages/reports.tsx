@@ -1,6 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import '../styles/globals.css';
-import '../styles/reports.css';
 import Header from '../components/Header';
 import { withAuth } from '../utils/withAuth';
 import { useAuth } from '../context/AuthContext';

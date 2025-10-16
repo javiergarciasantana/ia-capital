@@ -1,5 +1,3 @@
-import '../styles/globals.css';
-import '../styles/admin-panel.css';
 import MobileMenu from '../components/MobileMenu';
 import { withAuth } from '../utils/withAuth';
 import { useRouter } from 'next/router';
