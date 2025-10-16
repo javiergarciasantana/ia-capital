@@ -1,12 +1,12 @@
-// next.config.ts
+// frontend/next.config.ts
 import type { NextConfig } from 'next';
-const { i18n } = require('./next-i18next.config.js');
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  i18n,
-  eslint: { ignoreDuringBuilds: true },      // ya lo pusimos antes
-  typescript: { ignoreBuildErrors: true },   // ⬅️ saltar errores de TS en build
+  eslint: { ignoreDuringBuilds: true },
+  typescript: { ignoreBuildErrors: true },
+  pageExtensions: ['tsx', 'ts', 'jsx', 'js'],
+  // NO pongas experimental.appDir
 };
 
 export default nextConfig;

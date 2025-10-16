@@ -1,4 +1,4 @@
-// pages/index.tsx
+// frontend/pages/index.tsx
 import { GetServerSideProps } from 'next';
 
 export const getServerSideProps: GetServerSideProps = async () => ({
