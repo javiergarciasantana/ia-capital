@@ -28,15 +28,12 @@ type ProfileForm = {
 
 export default function AdminUsers() {
   const router = useRouter();
-  const API_BASE = '/api' as const;  const { auth } = useAuth();
+  const API_BASE = '/api' as const; const { auth } = useAuth();
 
   const [users, setUsers] = useState<any[]>([]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [profile, setProfile] = useState<ProfileForm>({
-    kycStatus: 'pending',
-    marketingOptIn: false,
-  });
+  const [profile, setProfile] = useState<ProfileForm>({});
 
   const [error, setError] = useState('');
   const [creating, setCreating] = useState(false);
@@ -81,14 +78,13 @@ export default function AdminUsers() {
 
     setCreating(true);
     try {
+      const { kycStatus, marketingOptIn, ...allowedProfile } = profile; // <- quita los no permitidos
       const body = {
         email,
         password,
         role: 'client' as const,
         isActive: true,
-        profile: clean({
-          ...profile,
-        }),
+        profile: clean(allowedProfile),
       };
 
       const res = await fetch(`${API_BASE}/users`, {
