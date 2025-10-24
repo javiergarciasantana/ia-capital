@@ -18,7 +18,7 @@ function Dashboard() {
   const [highlight, setHighlight] = useState(false);
   const { auth } = useAuth();
   const router = useRouter();
-  const API_BASE = 'https://ia-capital-web-iacapital.fn24pb.easypanel.host/api' as const;
+  const API_BASE = '/api' as const;
   useEffect(() => {
     if (!auth?.token) return;
 
