@@ -38,11 +38,15 @@ async function bootstrap() {
 
   // CORS (incluye preflight correcto)
   app.enableCors({
-    origin: allowedOrigins,
+    // Permite el origen que venga (Nest reflejará el Origin del navegador)
+    origin: (origin, cb) => cb(null, true),
+    credentials: true,
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-    credentials: true,
+    exposedHeaders: ['Content-Disposition'],
     maxAge: 86400,
+    preflightContinue: false,   // que la lib 'cors' responda al OPTIONS
+    optionsSuccessStatus: 204,  // 204 en los preflight
   });
 
   // ⛔️ IMPORTANTE: NO usar server.options('*', …) (rompe path-to-regexp)
