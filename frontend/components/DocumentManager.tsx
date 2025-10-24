@@ -30,7 +30,7 @@ export default function DocumentManager() {
   const [year, setYear] = useState('');
   const [bank, setBank] = useState('BBVA');
 
-  const API_BASE = 'https://ia-capital-web-iacapital.fn24pb.easypanel.host/api' as const;
+  const API_BASE = '/api' as const;
   const router = useRouter();
   const { auth } = useAuth();
 

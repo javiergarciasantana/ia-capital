@@ -44,7 +44,7 @@ export default function DocumentManager() {
   const [editingDoc, setEditingDoc] = useState<FileItem | null>(null);
   const [showModal, setShowModal] = useState(false);
 
-  const API_BASE = 'https://ia-capital-web-iacapital.fn24pb.easypanel.host/api' as const;
+  const API_BASE = '/api' as const;
   const router = useRouter();
   const { auth } = useAuth();
   const token = auth?.token;
