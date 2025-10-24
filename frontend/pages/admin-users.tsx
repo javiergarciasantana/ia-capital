@@ -28,7 +28,7 @@ type ProfileForm = {
 
 export default function AdminUsers() {
   const router = useRouter();
-  const API_BASE = '/api' as const;
+  const API_BASE = 'https://ia-capital-web-iacapital.fn24pb.easypanel.host/api' as const;
   const { auth } = useAuth();
 
   const [users, setUsers] = useState<any[]>([]);

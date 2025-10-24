@@ -19,7 +19,7 @@ type FileItem = {
   createdAt?: string;         // por si la fecha está aquí
 };
 
-const API_BASE = '/api' as const;
+const API_BASE = 'https://ia-capital-web-iacapital.fn24pb.easypanel.host/api' as const;
 
 function parseDate(d?: string) {
   const t = Date.parse(d || '');
