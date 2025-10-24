@@ -2,32 +2,29 @@
 import type { NextApiRequest, NextApiResponse } from 'next'
 
 export const config = {
-  api: {
-    bodyParser: false,       // reenviamos el cuerpo tal cual
-    externalResolver: true,
-  },
+  api: { bodyParser: false, externalResolver: true },
 }
 
 const BACKEND_ORIGIN =
   process.env.NEXT_API_PROXY_ORIGIN ||
   'https://ia-capital-web-iacapital.fn24pb.easypanel.host'
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // /api/users?role=client  ->  https://backend/api/users?role=client
-  const url = req.url || '/api'
-  const target = BACKEND_ORIGIN + url.replace(/^\/api/, '')
+// normalizamos sin barra final
+const ORIGIN = BACKEND_ORIGIN.replace(/\/$/, '')
 
-  // Clonamos headers (sin hop-by-hop)
+export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  // /api/... en el frontend -> /api/... en el backend (se mantiene /api)
+  const url = req.url || '/api'
+  const target = ORIGIN + url   // 👈 aqui mantenemos /api
+
   const headers = new Headers()
   for (const [k, v] of Object.entries(req.headers)) {
     if (!v) continue
-    if (Array.isArray(v)) headers.set(k, v.join(','))
-    else headers.set(k, v as string)
+    headers.set(k, Array.isArray(v) ? v.join(',') : (v as string))
   }
   headers.delete('host')
   headers.delete('content-length')
 
-  // Leemos el cuerpo crudo (para POST/PUT/PATCH)
   const chunks: Buffer[] = []
   for await (const chunk of req) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
   const body = chunks.length ? Buffer.concat(chunks) : undefined
@@ -38,7 +35,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     body: ['GET', 'HEAD'].includes((req.method || '').toUpperCase()) ? undefined : body,
   })
 
-  // Reenviamos status + headers + body
   res.status(resp.status)
   resp.headers.forEach((value, key) => {
     if (key === 'content-encoding' || key === 'transfer-encoding') return
