@@ -38,26 +38,29 @@ async function bootstrap() {
 
   // CORS (incluye preflight correcto)
   app.enableCors({
-    origin: allowedOrigins, // lista explícita
+    origin: allowedOrigins,
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
     credentials: true,
     maxAge: 86400,
   });
 
-  // Responder OPTIONS en Express por si algún middleware lo corta
-  const server = app.getHttpAdapter().getInstance();
-  server.options('*', (req, res) => {
-    const origin = req.get('origin');
-    if (origin && allowedOrigins.includes(origin)) {
-      res.header('Access-Control-Allow-Origin', origin);
-      res.header('Vary', 'Origin');
-      res.header('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
-      res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
-      res.header('Access-Control-Allow-Credentials', 'true');
-      res.header('Access-Control-Max-Age', '86400');
+  // ⛔️ IMPORTANTE: NO usar server.options('*', …) (rompe path-to-regexp)
+  // En su lugar, si quieres forzar respuesta a OPTIONS, usa un middleware sin ruta:
+  app.use((req, res, next) => {
+    if (req.method === 'OPTIONS') {
+      const origin = req.get('origin');
+      if (origin && allowedOrigins.includes(origin)) {
+        res.header('Access-Control-Allow-Origin', origin);
+        res.header('Vary', 'Origin');
+        res.header('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
+        res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+        res.header('Access-Control-Allow-Credentials', 'true');
+        res.header('Access-Control-Max-Age', '86400');
+      }
+      return res.sendStatus(204);
     }
-    res.sendStatus(204);
+    next();
   });
 
   // Validación global
