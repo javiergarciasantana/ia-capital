@@ -19,7 +19,7 @@ type FileItem = {
   createdAt?: string;         // por si la fecha está aquí
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || '/api';
+const API_BASE = '/api' as const;
 
 function parseDate(d?: string) {
   const t = Date.parse(d || '');
