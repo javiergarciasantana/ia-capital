@@ -1,9 +1,7 @@
-// pages/api/[...path].ts
+// src/pages/api/[...path].ts
 import type { NextApiRequest, NextApiResponse } from 'next'
 
-export const config = {
-  api: { bodyParser: false, externalResolver: true },
-}
+export const config = { api: { bodyParser: false, externalResolver: true } }
 
 const BACKEND_ORIGIN =
   process.env.NEXT_API_PROXY_ORIGIN ||
@@ -13,9 +11,9 @@ const BACKEND_ORIGIN =
 const ORIGIN = BACKEND_ORIGIN.replace(/\/$/, '')
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  // /api/... en el frontend -> /api/... en el backend (se mantiene /api)
+  // Mantener /api en la url -> /api/... en backend
   const url = req.url || '/api'
-  const target = ORIGIN + url   // 👈 aqui mantenemos /api
+  const target = ORIGIN + url
 
   const headers = new Headers()
   for (const [k, v] of Object.entries(req.headers)) {
