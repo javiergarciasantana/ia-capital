@@ -28,6 +28,7 @@ ENV API_PROXY_ORIGIN=${NEXT_API_PROXY_ORIGIN}
 COPY package*.json ./
 RUN npm ci
 COPY . .
+RUN chown -R node:node /app
 RUN npm run build
 
 # --- Runtime ---

@@ -16,16 +16,16 @@
     "next": "^15.5.2",
     "next-i18next": "^15.4.2",
     "next-themes": "^0.4.6",
-    "react": "^19.0.0",
-    "react-dom": "^19.1.1",
+    "react": "^19.0.0",         
+    "react-dom": "^19.0.0",      
     "react-i18next": "^15.5.3"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@types/jwt-decode": "^2.2.1",
     "@types/node": "^20.19.13",
-    "@types/react": "^19.1.12",
-    "@types/react-dom": "^19",
+    "@types/react": "^19.0.0",   
+    "@types/react-dom": "^19.0.0",
     "autoprefixer": "^10.4.21",
     "eslint": "^9",
     "eslint-config-next": "^15.5.2",
@@ -33,6 +33,6 @@
     "typescript": "^5.9.2"
   },
   "engines": {
-    "node": "18.x"
+    "node": "20.x"              
   }
 }
