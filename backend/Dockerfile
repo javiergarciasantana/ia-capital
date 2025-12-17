@@ -10,7 +10,9 @@ COPY package*.json ./
 RUN npm ci
 
 COPY . .
-RUN npm run build
+
+# Build the project and fail if dist/main.js is missing
+RUN npm run build && test -f dist/main.js
 
 # Dejar solo deps de producción y comprobar que existe dist/main.js
 # RUN npm prune --omit=dev && test -f dist/main.js

@@ -28,9 +28,8 @@ services:
       context: ./backend
     container_name: ia-backend
     restart: always
-    working_dir: /app
+    # working_dir removed for production
     volumes:
-      - ./backend:/app
       - ./uploads:/app/uploads
     environment:
       DB_HOST: db
@@ -46,6 +45,7 @@ services:
     depends_on:
       - db
       - ollama
+    command: ["node", "dist/main.js"]
     ports:
       - "5001:5000"
 
@@ -60,6 +60,7 @@ services:
       # - /app/node_modules
     environment:
       NEXT_PUBLIC_API_URL: /api
+      NEXT_API_PROXY_ORIGIN: http://backend:5000
       NODE_ENV: development
     depends_on:
       - backend

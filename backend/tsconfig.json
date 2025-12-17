@@ -16,6 +16,17 @@
     "forceConsistentCasingInFileNames": true,
     "noImplicitAny": false,
     "strictBindCallApply": false,
-    "noFallthroughCasesInSwitch": false
-  }
+    "noFallthroughCasesInSwitch": false,
+    "noEmitOnError": false,    // Genera archivos JS aunque haya errores
+    "allowJs": true,          // Permite mezclar JS y TS
+    "strict": false
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    "eslint.config.mjs"
+  ],
+  "include": [
+    "src/**/*.ts"
+  ]
 }
