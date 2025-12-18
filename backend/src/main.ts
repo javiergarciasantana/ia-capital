@@ -76,4 +76,7 @@ async function bootstrap() {
   console.log(`🚀 API escuchando en :${port}`);
   console.log(`CORS permitido: ${allowedOrigins.join(', ')}`);
 }
+// setInterval(() => {
+//   console.log('Mensaje de log cada 5 segundos');
+// }, 5000);
 bootstrap();

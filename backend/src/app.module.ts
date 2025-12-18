@@ -19,18 +19,23 @@ import { AiChatModule } from './ai-chat/ai-chat.module';
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (cfg: ConfigService) => {
-        const isProd = (cfg.get('NODE_ENV') || '').toLowerCase() === 'production';
+        // Debug: print TYPEORM_SYNC value
+        // console.log('TYPEORM_SYNC from .env:', cfg.get('TYPEORM_SYNC'));
+        // const isProd = (cfg.get('NODE_ENV') || '').toLowerCase() === 'production';
+        const isProd = true;
 
         // Si DB está fuera (Render/AWS/etc.) probablemente requiere SSL.
         // En Postgres local de Easypanel normalmente => false.
-        const useSsl =
-          (cfg.get('DB_SSL') || '').toString().toLowerCase() === 'true'
-            ? { rejectUnauthorized: false }
-            : false;
-
+        // const useSsl =
+        //   (cfg.get('DB_SSL') || '').toString().toLowerCase() === 'true'
+        //     ? { rejectUnauthorized: false }
+        //     : false;
+        const useSsl = false;
         // Por defecto: en prod no sincroniza; en dev sí.
-        const synchronize =
-          (cfg.get('TYPEORM_SYNC') ?? (isProd ? 'false' : 'true')).toString() === 'true';
+        // Always synchronize schema (for development only, not recommended for production)
+        const synchronize = true;
+        // const synchronize =
+        //   (cfg.get('TYPEORM_SYNC') ?? (isProd ? 'false' : 'true')).toString() === 'true';
 
         // Logging útil en dev; en prod suele ir a false
         const logging =

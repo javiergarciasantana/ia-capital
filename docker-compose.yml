@@ -30,6 +30,8 @@ services:
     restart: always
     # working_dir removed for production
     volumes:
+      - ./backend:/app/backend
+      - /app/backend/node_modules
       - ./uploads:/app/uploads
     environment:
       DB_HOST: db
@@ -45,7 +47,7 @@ services:
     depends_on:
       - db
       - ollama
-    command: ["node", "dist/main.js"]
+    command: ["npm", "run", "start:dev"]
     ports:
       - "5001:5000"
 

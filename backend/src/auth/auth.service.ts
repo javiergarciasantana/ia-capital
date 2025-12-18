@@ -27,9 +27,23 @@ export class AuthService {
   }
 
   async login(email: string, password: string): Promise<{ access_token: string }> {
+
+    console.log('AuthService.login called with:', email, password);
     const user = await this.usersService.findByEmail(email);
-    if (!user || !(await bcrypt.compare(password, user.password))) {
+    console.log('User from DB:', user);
+    if (!user) {
+      console.log('No user found for email:', email);
       throw new UnauthorizedException('Credenciales inválidas');
+    }
+    const passwordMatch = await bcrypt.compare(password, user.password);
+    console.log('Password match:', passwordMatch);
+    if (!passwordMatch) {
+      console.log('Password does not match for user:', email);
+      throw new UnauthorizedException('Credenciales inválidas');
+    }
+    if (!user.isActive) {
+      console.log('User is not active:', email);
+      throw new ForbiddenException('Usuario dado de baja. Contacte con su gestor.');
     }
 
     if (!user.isActive) {
