@@ -29,6 +29,7 @@ COPY --from=builder /app/backend/dist ./dist
 COPY --from=builder /app/backend/package*.json ./
 
 RUN mkdir -p /app/backend/uploads
+RUN ls -l node_modules/xlsx
 
 EXPOSE 5000
 CMD ["node", "dist/main.js"]

@@ -3,7 +3,7 @@ import React from 'react';
 import BrandLogo from './BrandLogo';
 import MobileMenu from './MobileMenu';
 
-type Variant = 'chat' | 'dashboard' | 'reports' | 'settings';
+type Variant = 'chat' | 'dashboard' | 'reports' | 'settings' | 'adminpanel';
 
 type HeaderProps = {
     title?: string;
@@ -22,12 +22,14 @@ export default function Header({
         variant === 'chat' ? 'chat-header'
             : variant === 'reports' ? 'reports-header'
                 : variant === 'settings' ? 'settings-header'
-                    : 'dashboard-header';
+                    : variant === 'adminpanel' ? 'adminpanel-header'
+                        : 'dashboard-header';
 
     const titleCls =
         variant === 'chat' ? 'chat-title page-title'
             : variant === 'reports' ? 'reports-title page-title'
-                : 'page-title';
+                : variant === 'adminpanel' ? 'adminpanel-title page-title'
+                    : 'page-title';
 
     return (
         <header className={headerCls}>

@@ -11,7 +11,11 @@ import { JwtStrategy } from './jwt.strategy';
     UsersModule,
     PassportModule,
     JwtModule.register({
-      secret: process.env.JWT_SECRET || 'dev-insecure',
+      secret: (() => {
+        const jwtSecret = process.env.JWT_SECRET || 'dev-insecure';
+        console.log('JWT_SECRET:', process.env.JWT_SECRET);
+        return jwtSecret;
+      })(),
       signOptions: { expiresIn: '1d' },
     }),
   ],

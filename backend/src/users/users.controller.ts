@@ -1,8 +1,13 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
 import { UsersService } from './users.service';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { UserRole } from './user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import * as XLSX from 'xlsx';
+import { XlsxService } from 'src/xlsx/xlsx.service';
+
 
 @Controller('users')
 export class UsersController {
@@ -39,4 +44,5 @@ export class UsersController {
     await this.usersService.remove(Number(id));
     return { ok: true };
   }
+
 }

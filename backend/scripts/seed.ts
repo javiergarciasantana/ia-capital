@@ -21,6 +21,10 @@ async function seed() {
       role: 'admin',
     });
     console.log('Admin creado');
+  } else {
+    // Always update the password for admin
+    await usersService.update(existingAdmin.id, { password: 'admin123' });
+    console.log('Admin password updated', adminPassword);
   }
 
   // Lista de clientes a insertar
