@@ -24,7 +24,7 @@ export class ReportsService {
       resumenEjecutivo: reportDto.resumenEjecutivo,
       snapshot: reportDto.snapshot,
       history: Array.isArray(reportDto.historico)
-      ? reportDto.historico.map((h: any) => this.HistoryRepo.create(h))
+      ? reportDto.historico.slice().reverse().map((h: any) => this.HistoryRepo.create(h))
       : [],
       distribution: Array.isArray(reportDto.distribucion)
       ? reportDto.distribucion.map((d: any) => this.DistributionRepo.create(d))
@@ -37,19 +37,50 @@ export class ReportsService {
   }
 
   async getReportsBetweenDates(from: Date, to: Date) {
-    const reports = await this.reportRepo.find({
-      relations: ['history', 'distribution', 'child_distribution'],
-      order: { fechaInforme: 'ASC' },
-    });
+    // const reports = await this.reportRepo.find({
+    //   relations: ['history', 'distribution', 'child_distribution'],
+    //   order: { fechaInforme: 'ASC' },
+    // });
 
-    return reports;
-    return this.reportRepo.find({
+    // return reports;
+    // Ensure 'from' and 'to' are Date objects
+    let fromDate = from instanceof Date ? from : new Date(from);
+    let toDate = to instanceof Date ? to : new Date(to);
+
+    // Set to UTC start/end of day
+    fromDate.setUTCHours(0, 0, 0, 0);
+    toDate.setUTCHours(23, 59, 59, 999);
+
+    console.log('Querying reports from', fromDate.toISOString(), 'to', toDate.toISOString());
+
+    const reports = await this.reportRepo.find({
       where: {
-        fechaInforme: Between(from, to),
+        fechaInforme: Between(fromDate, toDate),
       },
       relations: ['history', 'distribution', 'child_distribution'],
       order: { fechaInforme: 'ASC' },
     });
+    return reports;
+  }
+  async getReportsBetweenDatesForUser(from: Date, to: Date, id: Number) {
+    let fromDate = from instanceof Date ? from : new Date(from);
+    let toDate = to instanceof Date ? to : new Date(to);
+
+    // Set to UTC start/end of day
+    fromDate.setUTCHours(0, 0, 0, 0);
+    toDate.setUTCHours(23, 59, 59, 999);
+
+    console.log('Querying reports from', fromDate.toISOString(), 'to', toDate.toISOString());
+
+    const reports = await this.reportRepo.find({
+      where: {
+        clienteId: Number(id),
+        fechaInforme: Between(fromDate, toDate)
+      },
+      relations: ['history', 'distribution', 'child_distribution'],
+      order: { fechaInforme: 'ASC' },
+    });
+    return reports;
   }
 
   async deleteAllReports() {

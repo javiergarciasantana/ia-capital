@@ -63,4 +63,9 @@ export class AuthService {
       }),
     };
   }
+  async logout(): Promise<{ message: string }> {
+    // In JWT-based stateless authentication, logout is typically handled on the client side
+    // by deleting the token. Optionally, you can implement token blacklisting here.
+    return { message: 'Logout successful. Please remove your token on the client.' };
+  }
 }

@@ -31,3 +31,6 @@ ollama/
 Thumbs.db
 .vscode/
 .idea/
+
+# postman
+postman/

@@ -94,11 +94,23 @@ export class XlsxController {
     return { message: 'Informes recuperados', data: reports };
   }
   // Public: Get published info
-  @Get(':id/myinfo')
+  @Get('myinfo:from/:to')
   @UseGuards(JwtAuthGuard)
-  async getPublished() {
-    // TODO: Fetch published data from DB
-    return { message: 'Datos publicados', data: null };
+  async getMyReports(    
+    @Param('from') from: string,
+    @Param('to') to: string,
+    @User() user: any,
+  ) {
+    if (!user.isActive) {
+      throw new ForbiddenException('Usuario no activo.');
+    }
+    if (!from || !to) {
+      throw new BadRequestException('Missing required date range.');
+    }
+    const fromDate = new Date(from);
+    const toDate = new Date(to);
+    const reports = await this.reportsService.getReportsBetweenDatesForUser(fromDate, toDate, user.id);
+    return { message: 'Informes recuperados', data: reports };
   }
 
   // Admin-only: Delete all reports

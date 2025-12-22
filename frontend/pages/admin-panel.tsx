@@ -134,6 +134,12 @@ function AdminPanel() {
     return headers;
   }, [auth?.token]);
 
+  const getClientNameById = (id: number) => {
+    const client = clients.find(c => c.id === id);
+    if (!client) return `#${id}`;
+    return `${client.name}${client.surname ? ' ' + client.surname : ''}`;
+  };
+
   // Fetch Clients
   useEffect(() => {
     const fetchClients = async () => {
@@ -241,72 +247,72 @@ function AdminPanel() {
 
   return (
     <div className="dashboard-container" style={{ backgroundColor: '#f4f6f8', minHeight: '100vh' }}>
-      <Header variant="dashboard" title="Panel de Administración" />
+      <Header variant="dashboard" title="" />
 
       <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '32px' }}>
         
         {/* Header Section */}
         <div style={{ marginBottom: '32px' }}>
           <h2 style={{ fontSize: '28px', fontWeight: 300, color: '#1a2340', margin: 0 }}>
-            Gestión de <b style={{ fontWeight: 700 }}>Clientes</b>
+        Gestión de <b style={{ fontWeight: 700 }}>Clientes</b>
           </h2>
           <p style={{ color: '#666', marginTop: '8px' }}>Seleccione un cliente para subir y generar un nuevo informe mensual.</p>
         </div>
 
         {/* Client Grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px' }}>
-          {clients.map((client) => (
-            <div key={client.id} className="card" style={{
-              background: '#fff', borderRadius: '12px', padding: '24px',
-              boxShadow: '0 4px 6px rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.04)',
-              transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-              cursor: 'default',
-              display: 'flex', flexDirection: 'column', justifyContent: 'space-between'
-            }}>
-              <div>
-                <div style={{
-                  width: '48px', height: '48px', borderRadius: '50%',
-                  background: 'linear-gradient(135deg, #f0f4f8 60%, #e3e9f3 100%)',
-                  color: '#1a2340', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontWeight: 700, fontSize: '22px', marginBottom: '16px',
-                  boxShadow: '0 2px 8px rgba(26,35,64,0.08)',
-                  transition: 'transform 0.18s cubic-bezier(.4,0,.2,1), box-shadow 0.18s',
-                  cursor: 'pointer',
-                  border: '2px solid #e3e9f3',
-                  letterSpacing: '2px',
-                  fontFamily: 'Segoe UI, Merriweather, sans-serif',
-                }}
-                  onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.08)'}
-                  onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
-                >
-                  {(client?.name?.charAt(0)?.toUpperCase()) + (client?.surname?.charAt(0)?.toUpperCase() || '')}
-                </div>
-                <h3 style={{
-                  fontSize: '18px', fontWeight: 600, color: '#1a2340', marginBottom: '4px',
-                  fontFamily: 'Segoe UI, Merriweather, sans-serif', letterSpacing: '1px',
-                  textAlign: 'center',
-                }}>
-                  {(client?.name) + (client.surname ? ' ' + client.surname : '')}
-                </h3>
-              </div>
-              
-              <div style={{ marginTop: '24px' }}>
-                <label style={{ 
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%',
-                  padding: '10px', borderRadius: '8px', border: '1px dashed #bfa14a',
-                  color: '#bfa14a', fontWeight: 600, cursor: uploadingClientId === client.id ? 'not-allowed' : 'pointer',
-                  transition: 'background 0.2s'
-                }}>
-                  <input
-                    type="file" accept=".xlsx"
-                    disabled={uploadingClientId !== null}
-                    style={{ display: 'none' }}
-                    onChange={e => e.target.files?.[0] && handleXlsxUpload(client.id, e.target.files[0])}
-                  />
-                  {uploadingClientId === client.id ? 'Procesando...' : 'Subir Informe (XLSX)'}
-                </label>
-              </div>
+          {clients.filter(client => client.isActive).map((client) => (
+        <div key={client.id} className="card" style={{
+          background: '#fff', borderRadius: '12px', padding: '24px',
+          boxShadow: '0 4px 6px rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.04)',
+          transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+          cursor: 'default',
+          display: 'flex', flexDirection: 'column', justifyContent: 'space-between'
+        }}>
+          <div>
+            <div style={{
+          width: '48px', height: '48px', borderRadius: '50%',
+          background: 'linear-gradient(135deg, #f0f4f8 60%, #e3e9f3 100%)',
+          color: '#1a2340', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontWeight: 700, fontSize: '22px', marginBottom: '16px',
+          boxShadow: '0 2px 8px rgba(26,35,64,0.08)',
+          transition: 'transform 0.18s cubic-bezier(.4,0,.2,1), box-shadow 0.18s',
+          cursor: 'pointer',
+          border: '2px solid #e3e9f3',
+          letterSpacing: '2px',
+          fontFamily: 'Segoe UI, Merriweather, sans-serif',
+            }}
+          onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.08)'}
+          onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+            >
+          {(client?.name?.charAt(0)?.toUpperCase()) + (client?.surname?.charAt(0)?.toUpperCase() || '')}
             </div>
+            <h3 style={{
+          fontSize: '18px', fontWeight: 600, color: '#1a2340', marginBottom: '4px',
+          fontFamily: 'Segoe UI, Merriweather, sans-serif', letterSpacing: '1px',
+          textAlign: 'center',
+            }}>
+          {(client?.name) + (client.surname ? ' ' + client.surname : '')}
+            </h3>
+          </div>
+          
+          <div style={{ marginTop: '24px' }}>
+            <label style={{ 
+          display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%',
+          padding: '10px', borderRadius: '8px', border: '1px dashed #bfa14a',
+          color: '#bfa14a', fontWeight: 600, cursor: uploadingClientId === client.id ? 'not-allowed' : 'pointer',
+          transition: 'background 0.2s'
+            }}>
+          <input
+            type="file" accept=".xlsx"
+            disabled={uploadingClientId !== null}
+            style={{ display: 'none' }}
+            onChange={e => e.target.files?.[0] && handleXlsxUpload(client.id, e.target.files[0])}
+          />
+          {uploadingClientId === client.id ? 'Procesando...' : 'Subir Informe (XLSX)'}
+            </label>
+          </div>
+        </div>
           ))}
         </div>
       </div>
@@ -337,8 +343,8 @@ function AdminPanel() {
                 </p>
               </div>
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '12px', color: '#999', textTransform: 'uppercase' }}>Cliente ID</div>
-                <div style={{ fontSize: '18px', fontWeight: 700, color: '#1a2340' }}>#{reportPreview.clienteId}</div>
+                <div style={{ fontSize: '12px', color: '#999', textTransform: 'uppercase' }}>Cliente</div>
+                <div style={{ fontSize: '18px', fontWeight: 700, color: '#1a2340' }}>{getClientNameById(reportPreview.clienteId)}</div>
               </div>
             </div>
 
@@ -398,7 +404,22 @@ function AdminPanel() {
                        }}>
                          <div style={{ fontWeight: 700, color: '#1a2340', marginBottom: '8px' }}>{banco}</div>
                          <div style={{ fontSize: '12px', color: '#555', lineHeight: '1.6' }}>
-                           <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Neto:</span> <b>{formatCurrency(datos.patrimonioNeto)}</b></div>
+                           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                             <span>Neto:</span>
+                             <b>{formatCurrency(datos.patrimonioNeto)}</b>
+                           </div>
+                           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                             <span>Custodia:</span>
+                             <b>{formatCurrency(datos.custodia)}</b>
+                           </div>
+                           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                             <span>Fuera Custodia:</span>
+                             <b>{formatCurrency(datos.fueraCustodia)}</b>
+                           </div>
+                           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                             <span>Deuda:</span>
+                             <b>{formatCurrency(datos.deuda)}</b>
+                           </div>
                          </div>
                        </div>
                      ))}

@@ -28,15 +28,18 @@ async function seed() {
     console.log('Admin creado');
   } else {
     // Always update the password for admin
-    await usersService.update(existingAdmin.id, { password: 'admin123' });
+    await usersService.update(existingAdmin.id, { password: adminPassword });
     console.log('Admin password updated', adminPassword);
   }
+
+
 
   // Lista de clientes a insertar
   const clients = [
     'cliente1@ia.capital',
     'cliente2@ia.capital',
     'cliente3@ia.capital',
+    'cliente4@ia.capital',
   ];
 
   const clientNames = [
@@ -48,6 +51,7 @@ async function seed() {
 
   const clientPassword = await bcrypt.hash('client123', 10);
 
+  // Actualizar el password hash para los clientes si existen
   for (let i = 0; i < clients.length && i < clientNames.length; i++) {
     const email = clients[i];
     const clientName = clientNames[i];
@@ -60,6 +64,10 @@ async function seed() {
         role: 'client',
       });
       console.log(`Cliente ${email} (${clientName}) creado`);
+    } else {
+      // Always update the password for client
+      await usersService.update(exists.id, { password: clientPassword });
+      console.log(`Cliente ${email} password updated`);
     }
   }
 
