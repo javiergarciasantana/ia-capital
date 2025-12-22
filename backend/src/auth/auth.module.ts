@@ -13,7 +13,7 @@ import { JwtStrategy } from './jwt.strategy';
     JwtModule.register({
       secret: (() => {
         const jwtSecret = process.env.JWT_SECRET || 'dev-insecure';
-        console.log('JWT_SECRET:', process.env.JWT_SECRET);
+        // console.log('JWT_SECRET:', process.env.JWT_SECRET);
         return jwtSecret;
       })(),
       signOptions: { expiresIn: '1d' },

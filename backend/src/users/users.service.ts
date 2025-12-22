@@ -33,6 +33,8 @@ export class UsersService {
     if (exists) throw new BadRequestException('El email ya existe');
 
     const user = this.userRepository.create({
+      name: dto.name,
+      surname: dto.surname,
       email: dto.email,
       password: await bcrypt.hash(dto.password, 10),
       role: dto.role ?? 'client',
@@ -82,5 +84,12 @@ export class UsersService {
   async remove(id: number): Promise<void> {
     const user = await this.findById(id);
     await this.userRepository.remove(user);
+  }
+
+  async removeAll(): Promise<void> {
+    const users = await this.userRepository.find();
+    if (users.length > 0) {
+      await this.userRepository.remove(users);
+    }
   }
 }

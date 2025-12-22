@@ -45,4 +45,10 @@ export class UsersController {
     return { ok: true };
   }
 
+  @Delete('delete-all')
+  async deleteAll() {
+    await this.usersService.removeAll();
+    return { ok: true };
+  }
+
 }

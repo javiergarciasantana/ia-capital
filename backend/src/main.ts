@@ -50,8 +50,6 @@ async function bootstrap() {
   // ⛔️ IMPORTANTE: NO usar server.options('*', …) (rompe path-to-regexp)
   // En su lugar, si quieres forzar respuesta a OPTIONS, usa un middleware sin ruta:
   app.use((req, res, next) => {
-    console.log(`[${req.method}] ${req.url} - Headers:`, req.headers.authorization);
-
     if (req.method === 'OPTIONS') {
       const origin = req.get('origin');
       if (origin && allowedOrigins.includes(origin)) {

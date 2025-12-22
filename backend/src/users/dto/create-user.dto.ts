@@ -27,6 +27,12 @@ export class CreateUserProfileDto {
 }
 
 export class CreateUserDto {
+    @IsString() @IsNotEmpty()
+      name!: string;
+    
+    @IsOptional() @IsString()
+    surname?: string;
+
     @IsEmail() @IsNotEmpty()
     email!: string;
 

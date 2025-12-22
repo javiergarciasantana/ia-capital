@@ -29,5 +29,5 @@
   "include": [
     "src/**/*.ts",
     "scripts/**/*.ts"
-  ]
+, "data-source.ts"  ]
 }
