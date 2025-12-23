@@ -15,7 +15,7 @@ export class AiChatController {
   @Get('history')
   async history(@Req() req: any, @Query('limit') limitQ?: string) {
     const limit = Math.max(1, Math.min(60, parseInt(limitQ || '60', 10)));
-    const user = req.user as { id: number; email: string; role: string };
+    const user = req.user as { id: number; email: string; role: string; name: string };
     return this.chatService.getHistory(user.id, limit);
   }
 
@@ -28,7 +28,7 @@ export class AiChatController {
 
   @Post()
   async chat(@Req() req: Request & { user: any }, @Res() res: Response, @Body(new ValidationPipe({ whitelist: true })) body: ChatRequestDto) {
-    const user = req.user as { id: number; email: string; role: string };
+    const user = req.user as { id: number; email: string; role: string; name: string };
 
     // rate: 1 stream activo por usuario
     if (this.activeUsers.has(user.id)) {

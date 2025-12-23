@@ -6,6 +6,7 @@ import { Conversation } from './entities/conversation.entity';
 import { Message } from './entities/message.entity';
 import { OllamaClient } from './ollama.client';
 import { UserFactsService } from './user-facts.service';
+import { UsersService } from 'src/users/users.service';
 
 type Role = 'system' | 'user' | 'assistant';
 
@@ -16,6 +17,8 @@ export class AiChatService {
     @InjectRepository(Message) private msgRepo: Repository<Message>,
     private readonly ollama: OllamaClient,
     private readonly facts: UserFactsService,
+    private readonly usersService: UsersService,
+
   ) { }
 
   // ========= conversación =========
@@ -132,12 +135,15 @@ export class AiChatService {
   }
 
   // ========= system + HECHOS =========
-  private async buildSystemMessages(user: { id: number; email: string; role: string }) {
+  private async buildSystemMessages(user: { id: number; email: string; role: string; name: string }) {
     const persona = this.buildPersona();
     // UserFactsService ahora devuelve una estructura rica (Facts)
     const f = await this.facts.buildFacts({ id: user.id, role: user.role });
     // Convertimos esa estructura a texto formateado para el prompt
     const factsText = this.facts.factsToPromptText(f);
+    const fullUser = await this.usersService.findById(user.id);
+    console.log("username", fullUser.name);
+    const userLabel = fullUser.name 
 
     const system: Array<{ role: Role; content: string }> = [
       {
@@ -150,8 +156,7 @@ export class AiChatService {
       },
       {
         role: 'system',
-        content: `Usuario autenticado: ${user.email} (id:${user.id}). Rol: ${user.role}.`,
-      },
+        content: `Usuario autenticado: ${userLabel} (Rol: ${user.role}, Nombre: ${userLabel}).`,      },
       {
         role: 'system',
         content: factsText,
@@ -167,7 +172,7 @@ export class AiChatService {
 
   // ========= chat stream =========
   async *chatStream(
-    user: { id: number; email: string; role: string },
+    user: { id: number; email: string; role: string; name: string },
     clientMessages: Array<{ role: Role; content: string }>,
     opts?: { temperature?: number; maxTokens?: number; signal?: AbortSignal },
   ) {

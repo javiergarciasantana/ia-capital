@@ -189,7 +189,13 @@ function ChatPage() {
   };
 
   return (
-      <div className="chat-container" style={{ backgroundColor: '#f8fafc', minHeight: '100vh', paddingBottom: 60 }}>
+      <div className="dashboard-container" style={{ 
+        backgroundColor: '#f8fafc', 
+        height: '100vh',        // Altura fija de ventana
+        display: 'flex',        // Flex para organizar header y main
+        flexDirection: 'column',
+        overflow: 'hidden'      // Evita scroll en el body
+      }}>
       <style>{styles}</style>
       <Header variant="dashboard" title="Chat" />
       

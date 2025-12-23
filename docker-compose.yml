@@ -40,7 +40,7 @@ services:
       DB_NAME: iacapital_db
       JWT_SECRET: supersecret_en_env
       OLLAMA_HOST: http://ollama:11434
-      OLLAMA_MODEL: llama3
+      OLLAMA_MODEL: llama3.1:8b-instruct-q4_K_M
       AI_MAX_TOKENS: "512"
       AI_TEMPERATURE: "0.5"
     depends_on:

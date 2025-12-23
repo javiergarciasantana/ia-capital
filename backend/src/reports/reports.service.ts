@@ -66,7 +66,7 @@ export class ReportsService {
       where: {
         fechaInforme: Between(fromDate, toDate),
       },
-      relations: ['history', 'distribution', 'child_distribution'],
+      relations: ['history', 'distribution', 'child_distribution', 'client'],
       order: { fechaInforme: 'ASC' },
     });
     return reports;

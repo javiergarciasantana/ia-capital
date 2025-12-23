@@ -2,10 +2,11 @@
 import { Injectable } from '@nestjs/common';
 import { ReportsService } from '../reports/reports.service';
 
+// Tipos definidos para estructurar la información
 export type ReportKPIs = {
   totalPatrimony: number;
   debt: number;
-  ytdReturn: string; // ej. "3.38%"
+  ytdReturn: string;
   monthlyReturn: number;
   bankBreakdown?: string[];
 };
@@ -14,7 +15,7 @@ export type ReportFact = {
   id: number;
   fechaInforme: string;
   clienteId: number;
-  clientName: string; // ✅ MEJORA: Usamos el nombre real para la IA
+  clientName: string; // Guardamos el nombre real aquí
   kpis: ReportKPIs;
   resumenText: string;
 };
@@ -42,9 +43,9 @@ export class UserFactsService {
   async buildFacts(user: { id: number; role: string }): Promise<Facts> {
     let reportsRaw: any[] = [];
     
-    // 1. Obtención de datos según Rol
-    // Admin: Trae todo para la "visión global". Cliente: Solo lo suyo.
+    // 1. Obtener datos según el rol
     if (user.role === 'admin') {
+      // Traemos todo el histórico relevante para construir contexto global
       reportsRaw = await this.reportsService.getReportsBetweenDates(
         new Date('2020-01-01'), 
         new Date()
@@ -53,37 +54,38 @@ export class UserFactsService {
       reportsRaw = await this.reportsService.getReportsForUser(user.id);
     }
 
-    // 2. Mapeo inteligente de datos (Extracción de Hechos)
+    // 2. Procesar y enriquecer los datos
     const reports: ReportFact[] = reportsRaw.map((r) => {
-      // a) Extracción de KPIs numéricos (fallback a snapshot si falta resumen ejecutivo)
-      const totalPatrimony = r.resumenEjecutivo?.totalPatrimonio ?? r.snapshot?.patrimonioNeto ?? 0;
+      // Extracción de KPIs con fallbacks seguros
+      const totalPatrimony = r.resumenEjecutivo?.totalPatrimony ?? r.snapshot?.patrimonioNeto ?? 0;
       const debt = r.snapshot?.deuda ?? 0;
       
-      // b) Formato de Rendimiento (string o calculado del histórico)
       let ytdStr = r.resumenEjecutivo?.rendimientoAnualActual ?? '0%';
+      // Intentar sacar dato numérico preciso del histórico si existe
       if (typeof r.history?.slice(-1)[0]?.rendimientoYTD === 'number') {
         ytdStr = `${r.history.slice(-1)[0].rendimientoYTD.toFixed(2)}%`;
       }
 
-      // c) Desglose de Bancos (Texto legible para la IA)
+      // Formatear desglose de bancos para lectura fácil
       const bankBreakdown = r.resumenEjecutivo?.desgloseBancos 
         ? Object.entries(r.resumenEjecutivo.desgloseBancos).map(
             ([bank, data]: any) => `${bank}: ${this.formatCurrency(data.patrimonioNeto || 0)}`
           )
         : [];
 
-      // d) Resolución de Nombre del Cliente
-      // Busca nombre -> email -> ID
+      // RESOLUCIÓN DE NOMBRE: Prioridad Nombre -> Email -> ID
+      // Esto soluciona que te salga "Cliente #6"
       const rawClient = r.client || r.user; 
-      const displayName = rawClient 
-        ? (rawClient.name || rawClient.email || `Cliente #${r.clienteId}`)
-        : `Cliente #${r.clienteId}`;
+      // Buscar el nombre del cliente por ID en reportsRaw
+      let displayName = `${r.clienteId}`;
+      const clientReport = reportsRaw.find(rep => rep.clienteId === r.clienteId && (rep.client?.name || rep.user?.name));
+      if (clientReport) {
+        displayName = clientReport.client?.name || clientReport.user?.name || displayName;
+      }
 
-      // e) Resumen narrativo
-      // Si está vacío, ponemos un texto explícito para que la IA sepa que no hay análisis.
       const resumenText = (r.resumenEjecutivo?.resumen && r.resumenEjecutivo.resumen.length > 5)
         ? r.resumenEjecutivo.resumen
-        : 'No hay un resumen narrativo o análisis detallado disponible en este informe.';
+        : 'No hay un resumen narrativo disponible.';
 
       return {
         id: r.id,
@@ -101,13 +103,14 @@ export class UserFactsService {
       };
     });
 
-    // Ordenar: Más recientes primero
+    // Ordenar por fecha (más reciente primero)
     reports.sort((a, b) => new Date(b.fechaInforme).getTime() - new Date(a.fechaInforme).getTime());
 
-    // 3. Cálculo de Métricas Globales (Solo para Admin)
+    // 3. Generar Métricas Globales (Solo Admin)
+    // Esto acelera respuestas a preguntas tipo "¿cómo va la firma?"
     let globalMetrics;
     if (user.role === 'admin' && reports.length > 0) {
-      // Filtrar último reporte por cliente para no duplicar AUM en la suma global
+      // Usar solo el último reporte por cliente para no duplicar sumas
       const latestPerClient = new Map<number, ReportFact>();
       reports.forEach(r => {
         if (!latestPerClient.has(r.clienteId) || new Date(r.fechaInforme) > new Date(latestPerClient.get(r.clienteId)!.fechaInforme)) {
@@ -119,7 +122,6 @@ export class UserFactsService {
       const totalAUM = uniqueReports.reduce((sum, r) => sum + r.kpis.totalPatrimony, 0);
       const totalDebt = uniqueReports.reduce((sum, r) => sum + r.kpis.debt, 0);
       
-      // Promedio simple de rendimiento YTD
       const validReturns = uniqueReports
         .map(r => parseFloat(r.kpis.ytdReturn))
         .filter(n => !isNaN(n));
@@ -143,28 +145,28 @@ export class UserFactsService {
     };
   }
 
-  // Convierte los datos estructurados en texto plano para el Prompt del LLM
+  // Genera el texto que se inyectará en el prompt del sistema
   factsToPromptText(f: Facts): string {
     const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('es-ES', { year: 'numeric', month: 'long' });
     const lines: string[] = [];
 
-    // --- SECCIÓN 1: CONTEXTO GLOBAL (Para responder "qué me dices de todos los reports") ---
     lines.push(`ROL USUARIO: ${f.role.toUpperCase()}`);
     
+    // Bloque Global: Respuesta rápida para preguntas generales
     if (f.globalMetrics) {
-      lines.push(`\n=== RESUMEN GENERAL DE LA FIRMA (Estadísticas Globales) ===`);
-      lines.push(`• AUM Total (Activos bajo gestión): ${this.formatCurrency(f.globalMetrics.totalAUM)}`);
-      lines.push(`• Deuda Total Agregada: ${this.formatCurrency(f.globalMetrics.totalDebt)}`);
-      lines.push(`• Clientes Activos con informes: ${f.globalMetrics.activeClients}`);
-      lines.push(`• Rendimiento Promedio YTD Global: ${f.globalMetrics.avgReturn}`);
-      lines.push(`===========================================================\n`);
+      lines.push(`\n=== RESUMEN GLOBAL DE LA FIRMA ===`);
+      lines.push(`• AUM Total: ${this.formatCurrency(f.globalMetrics.totalAUM)}`);
+      lines.push(`• Deuda Total: ${this.formatCurrency(f.globalMetrics.totalDebt)}`);
+      lines.push(`• Clientes Activos: ${f.globalMetrics.activeClients}`);
+      lines.push(`• Rendimiento Promedio: ${f.globalMetrics.avgReturn}`);
+      lines.push(`==================================\n`);
     }
 
-    // --- SECCIÓN 2: DETALLE INDIVIDUAL (Para responder sobre clientes específicos) ---
-    lines.push(`=== INFORMES INDIVIDUALES POR CLIENTE ===`);
+    // Bloque Detallado: Para preguntas específicas sobre clientes
+    lines.push(`=== INFORMES DETALLADOS POR CLIENTE ===`);
     
     if (f.role === 'admin') {
-      // Agrupar reportes por NOMBRE DE CLIENTE
+      // Agrupar por nombre de cliente para dar estructura lógica
       const byClient = f.reports.reduce((acc, r) => {
         const key = r.clientName; 
         acc[key] = acc[key] || [];
@@ -174,11 +176,11 @@ export class UserFactsService {
 
       Object.entries(byClient).forEach(([clientName, clientReports]) => {
         lines.push(`\nCLIENTE: ${clientName}`);
-        // Limitamos a los 3 últimos informes para no saturar el prompt
-        clientReports.slice(0, 3).forEach(r => lines.push(this.formatSingleReport(r, fmtDate))); 
+        // Solo incluimos los 2 últimos reportes para no saturar el contexto
+        clientReports.slice(0, 2).forEach(r => lines.push(this.formatSingleReport(r, fmtDate))); 
       });
     } else {
-      // Si es usuario normal, mostramos su historial reciente (últimos 5)
+      // Usuario normal: Últimos 5 reportes
       f.reports.slice(0, 5).forEach(r => lines.push(this.formatSingleReport(r, fmtDate)));
     }
 
@@ -186,18 +188,17 @@ export class UserFactsService {
   }
 
   private formatSingleReport(r: ReportFact, dateFmt: (d: string) => string): string {
-    let txt = `   - [Informe ${dateFmt(r.fechaInforme)}]`;
+    let txt = `   - [${dateFmt(r.fechaInforme)}]`;
     txt += ` Patrimonio: ${this.formatCurrency(r.kpis.totalPatrimony)} |`;
     txt += ` Deuda: ${this.formatCurrency(r.kpis.debt)} |`;
     txt += ` Retorno YTD: ${r.kpis.ytdReturn}`;
     
     if (r.kpis.bankBreakdown && r.kpis.bankBreakdown.length > 0) {
-      txt += `\n     Bancos involucrados: ${r.kpis.bankBreakdown.join(', ')}`;
+      txt += `\n     Bancos: ${r.kpis.bankBreakdown.join(', ')}`;
     }
     
-    // Aquí se inyecta el texto del resumen o el aviso de "No hay resumen narrativo"
-    if (r.resumenText) { 
-      txt += `\n     Resumen/Notas: "${r.resumenText}"`;
+    if (r.resumenText && r.resumenText !== 'No hay un resumen narrativo disponible.') { 
+      txt += `\n     Nota: "${r.resumenText}"`;
     }
     return txt;
   }

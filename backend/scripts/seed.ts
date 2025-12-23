@@ -36,10 +36,10 @@ async function seed() {
 
   // Lista de clientes a insertar
   const clients = [
-    'cliente1@ia.capital',
-    'cliente2@ia.capital',
-    'cliente3@ia.capital',
-    'cliente4@ia.capital',
+    'gongroup@ia.capital',
+    'telma@ia.capital',
+    'horacio@ia.capital',
+    'tovar@ia.capital',
   ];
 
   const clientNames = [
