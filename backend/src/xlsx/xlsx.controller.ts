@@ -1,17 +1,20 @@
   import { Controller, Post, UseGuards, UseInterceptors, UploadedFile, Param, Body, Get, ForbiddenException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { BadRequestException } from '@nestjs/common';
-import { ReportsService } from '../reports/reports.service'; // Import your service
+import { ReportsService } from '../reports/reports.service'; 
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { XlsxService } from './xlsx.service';
+import { UsersService } from '../users/users.service'; 
 import { User } from '../auth/user.decorator';
+
 import { Delete } from '@nestjs/common';
 
 
 @Controller('xlsx')
 export class XlsxController {
   constructor(
-    private readonly reportsService: ReportsService
+    private readonly reportsService: ReportsService,
+    private readonly usersService: UsersService
   ) {}
 
   // Admin-only: Upload and process XLSX file
@@ -77,7 +80,7 @@ export class XlsxController {
   // Admin-only: Get all reports between two dates
   @Get('all/:from/:to')
   @UseGuards(JwtAuthGuard)
-  async getAllReports(
+  async getAllReportsBetweenDates(
     @Param('from') from: string,
     @Param('to') to: string,
     @User() user: any
@@ -93,15 +96,46 @@ export class XlsxController {
     const reports = await this.reportsService.getReportsBetweenDates(fromDate, toDate);
     return { message: 'Informes recuperados', data: reports };
   }
-  // Public: Get published info
-  @Get('myinfo:from/:to')
+
+  @Get('/all')
   @UseGuards(JwtAuthGuard)
-  async getMyReports(    
+  async getAllReports(    
+    @User() user: any,
+  ) {
+    if (user.role !== 'admin') {
+      throw new ForbiddenException('Solo los administradores pueden ver todos los informes.');
+    }
+    const fullUser = await this.usersService.findById(user.id);
+    if (!fullUser.isActive) {
+      throw new ForbiddenException('Usuario no activo.');
+    }    
+    const reports = await this.reportsService.getReports();
+    return { message: 'Informes recuperados', data: reports };
+  }
+
+  @Get('myinfo/all')
+  @UseGuards(JwtAuthGuard)
+  async getAllMyReports(    
+    @User() user: any,
+  ) {
+    const fullUser = await this.usersService.findById(user.id);
+   if (!fullUser.isActive) {
+      throw new ForbiddenException('Usuario no activo.');
+    }    
+    const reports = await this.reportsService.getReportsForUser(user.id);
+    return { message: 'Informes recuperados', data: reports };
+  }
+
+  // Public: Get published info
+  @Get('myinfo/:from/:to')
+  @UseGuards(JwtAuthGuard)
+  async getMyReportsBetweenDates(    
     @Param('from') from: string,
     @Param('to') to: string,
     @User() user: any,
-  ) {
-    if (!user.isActive) {
+    ) {
+    const fullUser = await this.usersService.findById(user.id);
+    if (!fullUser.isActive) {
       throw new ForbiddenException('Usuario no activo.');
     }
     if (!from || !to) {
@@ -111,7 +145,7 @@ export class XlsxController {
     const toDate = new Date(to);
     const reports = await this.reportsService.getReportsBetweenDatesForUser(fromDate, toDate, user.id);
     return { message: 'Informes recuperados', data: reports };
-  }
+    }
 
   // Admin-only: Delete all reports
   @Delete('delete-all')

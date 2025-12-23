@@ -12,10 +12,13 @@ import { Profit } from '../profits/profit.entity';
 
 // Nuevo agregador de “hechos”
 import { UserFactsService } from './user-facts.service';
+import { ReportsModule } from '../reports/reports.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Conversation, Message, Document, Profit])],
+  imports: [TypeOrmModule.forFeature([Conversation, Message, Document, Profit]), ReportsModule],
   controllers: [AiChatController],
   providers: [AiChatService, OllamaClient, UserFactsService],
+  exports: [UserFactsService],
+
 })
 export class AiChatModule { }

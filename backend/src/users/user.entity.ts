@@ -10,6 +10,7 @@ import {
 } from 'typeorm';
 import { Document } from '../documents/document.entity';
 import { UserProfile } from './user-profile.entity';
+import { Report } from '../reports/report.entity'; // <--- Importa Report
 
 export type UserRole = 'client' | 'admin' | 'superadmin';
 
@@ -56,4 +57,7 @@ export class User {
 
   @OneToMany(() => Document, (document) => document.user)
   documents: Document[];
+
+  @OneToMany(() => Report, (report) => report.clienteId)
+  reports: Report[];
 }

@@ -8,7 +8,42 @@ type Msg = { role: Role; content: string };
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api';
 
-// Limpieza ligera durante el stream (evita eco visual)
+// --- STYLES & ANIMATIONS ---
+const styles = `
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes jump {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+  }
+  .animate-message {
+    animation: fadeIn 0.3s ease-out forwards;
+  }
+  .dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background-color: #aaa;
+    margin: 0 2px;
+    animation: jump 0.6s infinite;
+  }
+  .dot:nth-child(2) { animation-delay: 0.1s; }
+  .dot:nth-child(3) { animation-delay: 0.2s; }
+`;
+
+// Helper component for the jumping dots
+const ThinkingDots = () => (
+  <div style={{ display: 'inline-flex', alignItems: 'center', padding: '0 4px' }}>
+    <span className="dot" />
+    <span className="dot" />
+    <span className="dot" />
+  </div>
+);
+
+// Limpieza ligera durante el stream
 function liveSanitize(s: string) {
   return s
     .replace(/\b(\w{3,})(\s+\1\b)+/gi, '$1')  // palabra repetida
@@ -19,9 +54,11 @@ function ChatPage() {
   const { auth } = useAuth();
   const [messages, setMessages] = useState<Msg[]>([]);
   const [input, setInput] = useState('');
+  // status: 'idle' | 'sending' (waiting for first byte) | 'streaming' (receiving text) | 'error'
   const [status, setStatus] = useState<'idle' | 'sending' | 'streaming' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const headers = useMemo(
     () => ({
@@ -32,11 +69,12 @@ function ChatPage() {
   );
 
   const scrollToBottom = () => {
-    const el = document.getElementById('chatScroll');
-    if (el) el.scrollTop = el.scrollHeight;
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
   };
 
-  // Cargar histórico (≤60)
+  // Cargar histórico
   useEffect(() => {
     (async () => {
       try {
@@ -44,7 +82,7 @@ function ChatPage() {
         if (!res.ok) throw new Error(await res.text());
         const data = await res.json();
         setMessages(data.messages || []);
-        setTimeout(scrollToBottom, 0);
+        setTimeout(scrollToBottom, 100);
       } catch (e: any) {
         console.warn('No se pudo cargar historial', e?.message);
       }
@@ -87,13 +125,13 @@ function ChatPage() {
     if (!content || status === 'streaming' || status === 'sending') return;
 
     setError(null);
-    setStatus('sending');
+    setStatus('sending'); // "Thinking" state
 
     const userMsg: Msg = { role: 'user', content };
-
-    // Añadimos usuario + placeholder assistant en UNA sola actualización
+    // Añadimos mensaje usuario y un placeholder vacío para el asistente
     setMessages((prev) => [...prev, userMsg, { role: 'assistant', content: '' }]);
     setInput('');
+    setTimeout(scrollToBottom, 0);
 
     const controller = new AbortController();
     abortRef.current = controller;
@@ -105,12 +143,12 @@ function ChatPage() {
         body: JSON.stringify({ messages: [userMsg] }),
         signal: controller.signal,
       });
+
       if (!res.ok || !res.body) {
-        const msg = await res.text();
-        throw new Error(msg || `HTTP ${res.status}`);
+        throw new Error(await res.text() || `HTTP ${res.status}`);
       }
 
-      setStatus('streaming');
+      setStatus('streaming'); // First byte received
       const reader = res.body.getReader();
 
       await readSSE(reader, (evt) => {
@@ -125,7 +163,6 @@ function ChatPage() {
           });
           scrollToBottom();
         } else if (evt.type === 'done') {
-          // Reemplazamos el último mensaje por el texto limpio final
           setMessages((prev) => {
             const copy = [...prev];
             const last = copy[copy.length - 1];
@@ -146,59 +183,111 @@ function ChatPage() {
       setStatus('idle');
       setError(err?.message || 'Error al conectar con la IA');
     } finally {
-      // Si por cualquier motivo no llegó 'done', aseguramos salir del modo streaming
       abortRef.current = null;
       setTimeout(scrollToBottom, 0);
     }
   };
 
-  const cancel = () => {
-    abortRef.current?.abort();
-    abortRef.current = null;
-    setStatus('idle');
-  };
-
-  const resetChat = async () => {
-    try {
-      await fetch(`${API_BASE}/ai/chat/reset`, { method: 'POST', headers });
-      setMessages([]);
-      setError(null);
-      setStatus('idle');
-    } catch {
-      setError('No se pudo borrar el chat');
-    }
-  };
-
   return (
-    <div className="chat-container">
-      <Header variant="dashboard" title="Dashboard" />
-      <main className="chat-main">
-        <div className="chat-messages" id="chatScroll">
-          {messages.map((m, i) => (
-            <div key={i} className={`message ${m.role === 'user' ? 'user' : 'bot'}`}>
-              {m.content || (m.role === 'assistant' && status === 'streaming' ? 'Escribiendo…' : '')}
+      <div className="chat-container" style={{ backgroundColor: '#f8fafc', minHeight: '100vh', paddingBottom: 60 }}>
+      <style>{styles}</style>
+      <Header variant="dashboard" title="Chat" />
+      
+      <main className="chat-main" style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 80px)', maxWidth: '900px', margin: '0 auto', width: '100%' }}>
+        
+        {/* MESSAGES AREA */}
+        <div 
+          className="chat-messages" 
+          id="chatScroll" 
+          ref={scrollRef}
+          style={{ 
+            flex: 1, 
+            overflowY: 'auto', 
+            padding: '20px', 
+            display: 'flex', 
+            flexDirection: 'column', 
+            gap: '12px' 
+          }}
+        >
+          {messages.map((m, i) => {
+            const isUser = m.role === 'user';
+            // If it's the last message (assistant) AND content is empty AND we are sending/streaming -> show dots
+            const isThinking = !isUser && m.content === '' && (status === 'sending' || status === 'streaming');
+
+            return (
+              <div 
+                key={i} 
+                className={`animate-message`}
+                style={{
+                  alignSelf: isUser ? 'flex-end' : 'flex-start',
+                  backgroundColor: isUser ? '#2ecc71' : '#f1f1f1',
+                  color: isUser ? '#fff' : '#333',
+                  padding: '12px 18px',
+                  borderRadius: isUser ? '18px 18px 2px 18px' : '18px 18px 18px 2px',
+                  maxWidth: '75%',
+                  boxShadow: '0 2px 5px rgba(0,0,0,0.05)',
+                  wordWrap: 'break-word',
+                  fontSize: '15px',
+                  lineHeight: '1.5'
+                }}
+              >
+                {isThinking ? (
+                  <ThinkingDots />
+                ) : (
+                  m.content
+                )}
+              </div>
+            );
+          })}
+          
+          {error && (
+            <div className="message bot animate-message" style={{ alignSelf: 'center', background: '#ffebee', color: '#c62828', padding: '8px 16px', borderRadius: '8px' }}>
+              ⚠️ {error}
             </div>
-          ))}
-          {error && <div className="message bot">⚠️ {error}</div>}
+          )}
+          <div style={{ height: 10 }} /> {/* Spacer */}
         </div>
 
-        <form className="chat-input-container" onSubmit={send}>
-          <input
-            className="chat-input"
-            type="text"
-            placeholder={status === 'streaming' ? 'Escribe mientras responde…' : 'Escribe un mensaje…'}
-            aria-label="Escribe un mensaje"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-          />
-          <button
-            className="send-btn"
-            aria-label="Enviar"
-            disabled={status === 'streaming' || input.trim().length === 0}
-          >
-            ▶
-          </button>
-        </form>
+        {/* INPUT AREA */}
+        <div style={{ padding: '16px 20px', background: '#fff', borderTop: '1px solid #eee' }}>
+          <form className="chat-input-container" onSubmit={send} style={{ display: 'flex', gap: '10px', alignItems: 'center', background: '#f9f9f9', padding: '8px', borderRadius: '30px', border: '1px solid #ddd' }}>
+            <input
+              className="chat-input"
+              type="text"
+              placeholder={status === 'streaming' || status === 'sending' ? 'NORA está escribiendo...' : 'Escribe un mensaje...'}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              disabled={status === 'streaming' || status === 'sending'}
+              style={{ flex: 1, border: 'none', background: 'transparent', padding: '10px 15px', outline: 'none', fontSize: '15px' }}
+            />
+            <button
+              type="submit"
+              className="send-btn"
+              disabled={status === 'streaming' || status === 'sending' || input.trim().length === 0}
+              style={{
+                background: status === 'streaming' ? '#ccc' : '#2ecc71',
+                color: '#fff',
+                border: 'none',
+                width: '40px',
+                height: '40px',
+                borderRadius: '50%',
+                cursor: status === 'streaming' ? 'default' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '18px',
+                transition: 'background 0.2s'
+              }}
+            >
+              {status === 'streaming' || status === 'sending' ? <span style={{fontSize: '10px'}}>●</span> : '➤'}
+            </button>
+          </form>
+          <div style={{ textAlign: 'center', marginTop: '8px' }}>
+             <button onClick={() => setMessages([])} style={{ background: 'none', border: 'none', color: '#999', fontSize: '11px', cursor: 'pointer', textDecoration: 'underline' }}>
+               Borrar chat
+             </button>
+          </div>
+        </div>
       </main>
     </div>
   );

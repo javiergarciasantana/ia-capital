@@ -7,7 +7,8 @@ import Header from '../components/Header';
 import ProfitCard from '../components/ProfitCard';
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend, AreaChart, Area
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend, 
+  AreaChart, Area
 } from 'recharts';
 
 // --- CONSTANTS & UTILITIES ---
@@ -1121,39 +1122,436 @@ function Dashboard() {
     );
   }
 
-  // --- CLIENT VIEW ---
+ 
+/* --- USER REPORTS DASHBOARD --- */
+
+// --- Custom KPI Card for User ---
+const KpiCard = ({
+  label,
+  value,
+  subValue,
+  isHighlight = false,
+}: {
+  label: string;
+  value: string;
+  subValue?: string;
+  isHighlight?: boolean;
+}) => (
+  <div
+    style={{
+      background: isHighlight ? '#f0f9ff' : '#fff',
+      borderRadius: 14,
+      boxShadow: isHighlight ? '0 4px 24px #bae6fd55' : '0 2px 10px #e5e7eb',
+      padding: '20px 24px',
+      minWidth: 180,
+      flex: 1,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'flex-start',
+      border: isHighlight ? '2px solid #38bdf8' : '1px solid #e5e7eb',
+      marginBottom: 8,
+    }}
+  >
+    <div style={{ fontSize: 12, color: '#64748b', fontWeight: 700, marginBottom: 6 }}>{label}</div>
+    <div style={{ fontSize: 26, fontWeight: 800, color: '#1e293b', marginBottom: subValue ? 2 : 0 }}>{value}</div>
+    {subValue && (
+      <div style={{ fontSize: 13, color: '#0ea5e9', fontWeight: 600, marginTop: 2 }}>{subValue}</div>
+    )}
+  </div>
+);
+
+// --- Custom Tooltip for PieChart ---
+const CustomTooltip = ({ active, payload }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div style={{
+        background: '#fff',
+        border: '1px solid #e5e7eb',
+        borderRadius: 8,
+        padding: '8px 14px',
+        fontSize: 14,
+        color: '#1a2340',
+        boxShadow: '0 2px 8px #0001'
+      }}>
+        <b>{payload[0].name}</b>
+        <div>{formatCurrency(payload[0].value)}</div>
+      </div>
+    );
+  }
+  return null;
+};
+
+// --- Helper: Group reports by year/month ---
+function groupReportsByYearMonth(reports: ReportData[]) {
+  const grouped: Record<string, Record<string, ReportData[]>> = {};
+  reports.forEach((r) => {
+    const d = new Date(r.fechaInforme);
+    const year = d.getFullYear();
+    const month = (d.getMonth() + 1).toString().padStart(2, '0');
+    if (!grouped[year]) grouped[year] = {};
+    if (!grouped[year][month]) grouped[year][month] = [];
+    grouped[year][month].push(r);
+  });
+  return grouped;
+}
+
+// --- USER REPORTS DASHBOARD COMPONENT ---
+const UserReportsDashboard = ({
+  auth,
+  API_BASE,
+  formatCurrency,
+  PIE_COLORS,
+  parsePercentage,
+  renderAssetChips,
+  SectionTitle,
+  CardStyle,
+  formatDate,
+}: any) => {
+  const [userReports, setUserReports] = useState<ReportData[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedYear, setSelectedYear] = useState<string>('');
+  const [selectedMonth, setSelectedMonth] = useState<string>('');
+  const [selectedReport, setSelectedReport] = useState<ReportData | null>(null);
+
+  // Fetch all user reports
+  useEffect(() => {
+    if (!auth?.token) return;
+    setLoading(true);
+    fetch(`${API_BASE}/xlsx/myinfo/${dateRange.from}/${dateRange.to}`, {
+      headers: { Authorization: `Bearer ${auth.token}` },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        const arr = Array.isArray(data) ? data : data.data;
+        setUserReports(arr || []);
+        // Default to latest year/month
+        if (arr && arr.length) {
+          const sorted = [...arr].sort((a, b) => new Date(b.fechaInforme).getTime() - new Date(a.fechaInforme).getTime());
+          const d = new Date(sorted[0].fechaInforme);
+          setSelectedYear(d.getFullYear().toString());
+          setSelectedMonth((d.getMonth() + 1).toString().padStart(2, '0'));
+          setSelectedReport(sorted[0]);
+        }
+      })
+      .finally(() => setLoading(false));
+  }, [auth?.token, auth?.userId]);
+
+  // Grouped by year/month for toggles
+  const grouped = useMemo(() => groupReportsByYearMonth(userReports), [userReports]);
+  const years = useMemo(() => Object.keys(grouped).sort((a, b) => Number(b) - Number(a)), [grouped]);
+  const months = useMemo(() => selectedYear ? Object.keys(grouped[selectedYear] || {}).sort((a, b) => Number(b) - Number(a)) : [], [grouped, selectedYear]);
+  const reportsForSelected = useMemo(() => (selectedYear && selectedMonth && grouped[selectedYear]?.[selectedMonth]) || [], [grouped, selectedYear, selectedMonth]);
+
+  // Pie data for chart
+  const pieData = useMemo(() => {
+    if (!selectedReport) return [];
+    return (selectedReport.distribution || []).filter((d) => d.categoria !== 'Total').map((d) => ({
+      name: d.categoria,
+      value: d.valor,
+    }));
+  }, [selectedReport]);
+
+  // Extra metrics
+  const extraMetrics = useMemo(() => {
+    if (!selectedReport) return null;
+    const hist = selectedReport.history || [];
+    const last = hist[0];
+    const first = hist[hist.length - 1];
+    const totalReturn = last && first ? ((last.valorNeto / first.valorNeto - 1) * 100) : 0;
+    const maxDrawdown = hist.reduce((max, h, i, arr) => {
+      const peak = Math.max(...arr.slice(0, i + 1).map(x => x.valorNeto));
+      const dd = (peak - h.valorNeto) / peak;
+      return Math.max(max, dd);
+    }, 0);
+    return {
+      totalReturn,
+      maxDrawdown: maxDrawdown * 100,
+      months: hist.length,
+    };
+  }, [selectedReport]);
+
   return (
-    <div className="dashboard-container">
-      <Header variant="dashboard" title="Panel" />
-      <main className="dashboard-main">
-        <ProfitCard />
-        <div className="card-grid">
-          <div className={`card small-card ${lastDoc ? 'highlighted-card' : ''}`} onClick={() => router.push('/reports')}>
-            <p className="card-title">Último informe</p>
-            {lastDoc ? (
-              <>
-                <p className="doc-title" title={lastDoc.title || lastDoc.originalName}>
-                  {(lastDoc.title || lastDoc.originalName).slice(0, 30)}...
-                </p>
-                <div className="go-link">Ver en informes →</div>
-              </>
-            ) : (
-              <>
-                <div className="card-placeholder line" />
-                <div className="card-placeholder line short" />
-              </>
-            )}
-          </div>
-          {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="card small-card">
-              <div className="card-placeholder line" />
-              <div className="card-placeholder line short" />
-            </div>
+    <div style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 0' }}>
+      <h2 style={{ fontSize: 28, fontWeight: 800, color: '#1a2340', marginBottom: 8 }}>Tus Informes de Inversión</h2>
+      <p style={{ color: '#64748b', marginBottom: 24, textAlign: 'center' }}>
+        Visualiza y explora la evolución de tu patrimonio, rentabilidad y distribución de activos por mes y año.
+      </p>
+      {/* Year/Month Toggles */}
+      <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
+        <div>
+          <span style={{ fontWeight: 600, color: '#64748b', marginRight: 8 }}>Año:</span>
+          {years.map((y) => (
+            <button
+              key={y}
+              onClick={() => { setSelectedYear(y); setSelectedMonth(''); setSelectedReport(null); }}
+              style={{
+                padding: '6px 16px',
+                borderRadius: 8,
+                border: y === selectedYear ? '2px solid #0ea5e9' : '1px solid #e5e7eb',
+                background: y === selectedYear ? '#e0f2fe' : '#fff',
+                color: y === selectedYear ? '#0369a1' : '#1a2340',
+                fontWeight: 700,
+                marginRight: 4,
+                cursor: 'pointer',
+                fontSize: 15,
+              }}
+            >
+              {y}
+            </button>
           ))}
         </div>
-      </main>
+        {selectedYear && (
+          <div>
+            <span style={{ fontWeight: 600, color: '#64748b', marginRight: 8 }}>Mes:</span>
+            {months.map((m) => (
+              <button
+                key={m}
+                onClick={() => {
+                  setSelectedMonth(m);
+                  const rep = grouped[selectedYear][m]?.sort((a, b) => new Date(b.fechaInforme).getTime() - new Date(a.fechaInforme).getTime())[0];
+                  setSelectedReport(rep || null);
+                }}
+                style={{
+                  padding: '6px 16px',
+                  borderRadius: 8,
+                  border: m === selectedMonth ? '2px solid #0ea5e9' : '1px solid #e5e7eb',
+                  background: m === selectedMonth ? '#e0f2fe' : '#fff',
+                  color: m === selectedMonth ? '#0369a1' : '#1a2340',
+                  fontWeight: 700,
+                  marginRight: 4,
+                  cursor: 'pointer',
+                  fontSize: 15,
+                }}
+              >
+                {new Date(2000, Number(m) - 1).toLocaleString('es-ES', { month: 'short' }).toUpperCase()}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      {/* Report Cards */}
+      {loading ? (
+        <div style={{ textAlign: 'center', color: '#64748b', padding: 60 }}>Cargando informes...</div>
+      ) : !selectedReport ? (
+        <div style={{ textAlign: 'center', color: '#64748b', padding: 60 }}>Selecciona año y mes para ver tu informe.</div>
+      ) : (
+        <div style={{ ...CardStyle, padding: 0, overflow: 'hidden' }}>
+          {/* --- USER REPORT MODAL-LIKE PRESENTATION --- */}
+          <div style={{ padding: '32px 32px 0 32px' }}>
+            {/* Header */}
+            <div style={{
+              display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24,
+              borderBottom: '1px solid #f1f5f9', paddingBottom: 12
+            }}>
+              <div>
+                <h3 style={{ margin: 0, color: '#1a2340', fontSize: 22, fontWeight: 800 }}>Informe de {formatDate(selectedReport.fechaInforme)}</h3>
+                <div style={{ color: '#64748b', fontSize: 14, marginTop: 2 }}>
+                  <b>Patrimonio Neto:</b> {formatCurrency(selectedReport.resumenEjecutivo?.totalPatrimonio)}
+                </div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 13, color: '#999', textTransform: 'uppercase' }}>Rentabilidad YTD</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#22c55e' }}>{selectedReport.resumenEjecutivo?.rendimientoAnualActual}</div>
+              </div>
+            </div>
+            {/* KPIs */}
+            <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', marginBottom: 32 }}>
+              <KpiCard
+                label="PATRIMONIO TOTAL"
+                value={formatCurrency(selectedReport.resumenEjecutivo?.totalPatrimonio)}
+                isHighlight
+              />
+              <KpiCard
+                label="RENDIMIENTO ANUAL (YTD)"
+                value={selectedReport.resumenEjecutivo?.rendimientoAnualActual ?? '0%'}
+                isHighlight
+                subValue="Rentabilidad Acumulada"
+              />
+              <KpiCard
+                label="APALANCAMIENTO"
+                value={selectedReport.resumenEjecutivo?.deudaSobrePatrimonio ?? '0%'}
+              />
+              <KpiCard
+                label="Deuda Total"
+                value={formatCurrency(selectedReport.snapshot?.deuda)}
+              />
+              <KpiCard
+                label="Custodia"
+                value={formatCurrency(selectedReport.snapshot?.custodia)}
+              />
+              <KpiCard
+                label="Fuera Custodia"
+                value={formatCurrency(selectedReport.snapshot?.fueraCustodia)}
+              />
+              {extraMetrics && (
+                <>
+                  <KpiCard
+                    label="Rentabilidad Total"
+                    value={extraMetrics.totalReturn ? `${extraMetrics.totalReturn.toFixed(2)}%` : '0%'}
+                    subValue="Desde el primer informe"
+                  />
+                  <KpiCard
+                    label="Máx. Drawdown"
+                    value={extraMetrics.maxDrawdown ? `${extraMetrics.maxDrawdown.toFixed(2)}%` : '0%'}
+                    subValue="Caída máxima"
+                  />
+                  <KpiCard
+                    label="Meses de Histórico"
+                    value={Number(extraMetrics.months).toString()}
+                  />
+                </>
+              )}
+            </div>
+            {/* Bank Breakdown */}
+            <SectionTitle title="Desglose por Bancos" />
+            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 32 }}>
+              {selectedReport.resumenEjecutivo?.desgloseBancos &&
+                Object.entries(selectedReport.resumenEjecutivo.desgloseBancos).map(([banco, datos]: any, idx) => (
+                  <div key={banco} style={{
+                    minWidth: 200, background: '#f8fafc', borderRadius: 8, padding: 16,
+                    borderLeft: `4px solid ${PIE_COLORS[idx % PIE_COLORS.length]}`,
+                    flex: 1,
+                  }}>
+                    <div style={{ fontWeight: 700, color: '#1a2340', marginBottom: 8 }}>{banco}</div>
+                    <div style={{ fontSize: 13, color: '#555', lineHeight: 1.6 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <span>Neto:</span>
+                        <b>{formatCurrency(datos.patrimonioNeto)}</b>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <span>Custodia:</span>
+                        <b>{formatCurrency(datos.custodia)}</b>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                        <span>Fuera Custodia:</span>
+                        <b>{formatCurrency(datos.fueraCustodia)}</b>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Deuda:</span>
+                        <b>{formatCurrency(datos.deuda)}</b>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+            </div>
+            {/* Distribución de Activos */}
+            {(selectedReport.distribution?.length > 0 || selectedReport.child_distribution?.length > 0) && (
+              <>
+                <SectionTitle title="Distribución de Activos" />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 20, marginBottom: 32 }}>
+                  {selectedReport.distribution?.length > 0 && (
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: '#888', marginBottom: 8, textTransform: 'uppercase' }}>Cartera Principal</div>
+                      {renderAssetChips(selectedReport.distribution, 'Total', 'blue')}
+                    </div>
+                  )}
+                  {selectedReport.child_distribution?.length > 0 && (
+                    <div>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: '#888', marginBottom: 8, textTransform: 'uppercase' }}>Sub-Carteras / Hijos</div>
+                      {renderAssetChips(selectedReport.child_distribution, 'Total', 'gold')}
+                    </div>
+                  )}
+                </div>
+              </>
+            )}
+            {/* Chart & History */}
+            <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap', marginBottom: 32, alignItems: 'flex-start' }}>
+              {/* Historico Table */}
+              <div style={{ flex: 1, minWidth: 320 }}>
+                <SectionTitle title="Evolución Histórica" />
+                <div style={{ background: '#fff', border: '1px solid #eee', borderRadius: 8, overflow: 'hidden' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, textAlign: 'left' }}>
+                    <thead style={{ background: '#f8f9fa' }}>
+                      <tr>
+                        <th style={{ padding: '12px 16px', fontWeight: 600, color: '#1a2340' }}>Fecha</th>
+                        <th style={{ padding: '12px 16px', fontWeight: 600, color: '#1a2340', textAlign: 'right' }}>Valor</th>
+                        <th style={{ padding: '12px 16px', fontWeight: 600, color: '#1a2340', textAlign: 'right' }}>% Mes</th>
+                        <th style={{ padding: '12px 16px', fontWeight: 600, color: '#1a2340', textAlign: 'right' }}>% YTD</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(selectedReport.history || []).slice(0, 12).map((h, idx) => (
+                        <tr key={idx} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                          <td style={{ padding: '10px 16px', color: '#555' }}>{new Date(h.fecha).toLocaleDateString()}</td>
+                          <td style={{ padding: '10px 16px', textAlign: 'right', fontWeight: 500 }}>{h.valorNeto?.toLocaleString()}</td>
+                          <td style={{ padding: '10px 16px', textAlign: 'right', color: (h.rendimientoMensual || 0) >= 0 ? '#217a3c' : '#e74c3c' }}>
+                            {(h.rendimientoMensual || 0) > 0 ? '+' : ''}{h.rendimientoMensual?.toFixed(2)}%
+                          </td>
+                          <td style={{ padding: '10px 16px', textAlign: 'right', color: (h.rendimientoYTD || 0) >= 0 ? '#217a3c' : '#e74c3c' }}>
+                            {(h.rendimientoYTD || 0) > 0 ? '+' : ''}{h.rendimientoYTD?.toFixed(2)}%
+                          </td>
+                        </tr>
+                      ))}
+                      {(!selectedReport.history || selectedReport.history.length === 0) && (
+                        <tr><td colSpan={4} style={{ padding: '16px', textAlign: 'center', color: '#999' }}>Sin histórico reciente</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+              {/* Pie Chart */}
+              {pieData.length > 0 && (
+                <div style={{ flex: 1, minWidth: 320, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <SectionTitle title="Composición Visual" />
+                  <div style={{ width: '100%', height: 250, position: 'relative' }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={pieData}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={80}
+                          paddingAngle={5}
+                        >
+                          {pieData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} stroke="none" />
+                          ))}
+                        </Pie>
+                        <Tooltip content={<CustomTooltip />} />
+                        <Legend verticalAlign="bottom" height={36} iconType="circle" />
+                      </PieChart>
+                    </ResponsiveContainer>
+                    {/* Center Text */}
+                    <div style={{
+                      position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -65%)',
+                      textAlign: 'center', pointerEvents: 'none'
+                    }}>
+                      <div style={{ fontSize: 24, fontWeight: 700, color: '#1a2340' }}>{pieData.length}</div>
+                      <div style={{ fontSize: 12, color: '#999' }}>Activos</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
+};
+
+// --- RENDER USER DASHBOARD IF CLIENT ---
+if (auth.role === 'client') {
+  return (
+    <div className="dashboard-container" style={{ background: '#f8fafc', minHeight: '100vh', paddingBottom: 60 }}>
+      <Header variant="dashboard" title="Panel Personal" />
+      <UserReportsDashboard
+        auth={auth}
+        API_BASE={API_BASE}
+        formatCurrency={formatCurrency}
+        PIE_COLORS={PIE_COLORS}
+        parsePercentage={parsePercentage}
+        renderAssetChips={renderAssetChips}
+        SectionTitle={SectionTitle}
+        CardStyle={CardStyle}
+        formatDate={formatDate}
+      />
+    </div>
+  );
+}
 }
 
 export default withAuth(Dashboard, ['client', 'admin', 'superadmin']);

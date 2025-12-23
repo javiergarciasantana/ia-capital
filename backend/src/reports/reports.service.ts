@@ -36,6 +36,15 @@ export class ReportsService {
     return this.reportRepo.save(report);
   }
 
+  async getReports() {
+    const reports = await this.reportRepo.find({
+      relations: ['history', 'distribution', 'child_distribution'],
+      order: { fechaInforme: 'ASC' },
+    });
+
+    return reports;
+  }
+
   async getReportsBetweenDates(from: Date, to: Date) {
     // const reports = await this.reportRepo.find({
     //   relations: ['history', 'distribution', 'child_distribution'],
@@ -62,6 +71,19 @@ export class ReportsService {
     });
     return reports;
   }
+
+  async getReportsForUser(id: Number) {
+    const reports = await this.reportRepo.find({
+      where: {
+        clienteId: Number(id)
+      },
+      relations: ['history', 'distribution', 'child_distribution'],
+      order: { fechaInforme: 'ASC' },
+    });
+
+    return reports;
+  }
+
   async getReportsBetweenDatesForUser(from: Date, to: Date, id: Number) {
     let fromDate = from instanceof Date ? from : new Date(from);
     let toDate = to instanceof Date ? to : new Date(to);

@@ -13,7 +13,7 @@ async function seed() {
   // Eliminar todos los usuarios previos
   // await usersService.removeAll();
 
-  const adminPassword = await bcrypt.hash('admin123', 10);
+  const adminPassword = 'admin123';
 
   // Crear admin solo si no existe
   const existingAdmin = await usersService.findByEmail('admin@ia.capital');
@@ -49,7 +49,7 @@ async function seed() {
     'Tovar',
   ]
 
-  const clientPassword = await bcrypt.hash('client123', 10);
+  const clientPassword = 'client123';
 
   // Actualizar el password hash para los clientes si existen
   for (let i = 0; i < clients.length && i < clientNames.length; i++) {
@@ -62,6 +62,7 @@ async function seed() {
         email,
         password: clientPassword,
         role: 'client',
+        isActive: true,
       });
       console.log(`Cliente ${email} (${clientName}) creado`);
     } else {

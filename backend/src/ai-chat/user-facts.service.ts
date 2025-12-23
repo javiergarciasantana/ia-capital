@@ -1,237 +1,204 @@
 // backend/src/ai-chat/user-facts.service.ts
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Document } from '../documents/document.entity';
-import { Profit } from '../profits/profit.entity';
+import { ReportsService } from '../reports/reports.service';
+
+export type ReportKPIs = {
+  totalPatrimony: number;
+  debt: number;
+  ytdReturn: string; // ej. "3.38%"
+  monthlyReturn: number;
+  bankBreakdown?: string[];
+};
+
+export type ReportFact = {
+  id: number;
+  fechaInforme: string;
+  clienteId: number;
+  clientName: string; // ✅ MEJORA: Usamos el nombre real para la IA
+  kpis: ReportKPIs;
+  resumenText: string;
+};
 
 export type Facts = {
-    documents: Array<{
-        id: any;
-        title: string;
-        bank?: string;
-        type?: string;
-        dateISO?: string;  // fecha ISO preferida
-        year?: number;
-        month?: string | number;
-    }>;
-    latestDocument?: Facts['documents'][number];
-    latestByBank: Record<string, Facts['documents'][number]>;
-    generalDocuments: Array<Facts['documents'][number]>;
-    profitsByBank: Record<string, { total: number; currency: string; last?: { amount: number; currency: string; dateISO?: string; label?: string } }>;
-    lastProfit?: { bank?: string; amount: number; currency: string; dateISO?: string; label?: string };
+  role: string;
+  globalMetrics?: {
+    totalAUM: number;
+    totalDebt: number;
+    activeClients: number;
+    avgReturn: string;
+  };
+  reports: ReportFact[];
+  latestReport?: ReportFact;
 };
 
 @Injectable()
 export class UserFactsService {
-    constructor(
-        @InjectRepository(Document) private readonly docRepo: Repository<Document>,
-        @InjectRepository(Profit) private readonly profitRepo: Repository<Profit>,
-    ) { }
+  constructor(private readonly reportsService: ReportsService) {}
 
-    // -------- helpers robustos --------
-    private asDateISO(obj: any): string | undefined {
-        const m = obj?.month;
-        const y = obj?.year;
-        if (obj?.date instanceof Date) return obj.date.toISOString();
-        if (typeof obj?.date === 'string' || typeof obj?.date === 'number') {
-            const d = new Date(obj.date);
-            if (!isNaN(+d)) return d.toISOString();
+  private formatCurrency(val: number) {
+    return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(val);
+  }
+
+  async buildFacts(user: { id: number; role: string }): Promise<Facts> {
+    let reportsRaw: any[] = [];
+    
+    // 1. Obtención de datos según Rol
+    // Admin: Trae todo para la "visión global". Cliente: Solo lo suyo.
+    if (user.role === 'admin') {
+      reportsRaw = await this.reportsService.getReportsBetweenDates(
+        new Date('2020-01-01'), 
+        new Date()
+      );
+    } else {
+      reportsRaw = await this.reportsService.getReportsForUser(user.id);
+    }
+
+    // 2. Mapeo inteligente de datos (Extracción de Hechos)
+    const reports: ReportFact[] = reportsRaw.map((r) => {
+      // a) Extracción de KPIs numéricos (fallback a snapshot si falta resumen ejecutivo)
+      const totalPatrimony = r.resumenEjecutivo?.totalPatrimonio ?? r.snapshot?.patrimonioNeto ?? 0;
+      const debt = r.snapshot?.deuda ?? 0;
+      
+      // b) Formato de Rendimiento (string o calculado del histórico)
+      let ytdStr = r.resumenEjecutivo?.rendimientoAnualActual ?? '0%';
+      if (typeof r.history?.slice(-1)[0]?.rendimientoYTD === 'number') {
+        ytdStr = `${r.history.slice(-1)[0].rendimientoYTD.toFixed(2)}%`;
+      }
+
+      // c) Desglose de Bancos (Texto legible para la IA)
+      const bankBreakdown = r.resumenEjecutivo?.desgloseBancos 
+        ? Object.entries(r.resumenEjecutivo.desgloseBancos).map(
+            ([bank, data]: any) => `${bank}: ${this.formatCurrency(data.patrimonioNeto || 0)}`
+          )
+        : [];
+
+      // d) Resolución de Nombre del Cliente
+      // Busca nombre -> email -> ID
+      const rawClient = r.client || r.user; 
+      const displayName = rawClient 
+        ? (rawClient.name || rawClient.email || `Cliente #${r.clienteId}`)
+        : `Cliente #${r.clienteId}`;
+
+      // e) Resumen narrativo
+      // Si está vacío, ponemos un texto explícito para que la IA sepa que no hay análisis.
+      const resumenText = (r.resumenEjecutivo?.resumen && r.resumenEjecutivo.resumen.length > 5)
+        ? r.resumenEjecutivo.resumen
+        : 'No hay un resumen narrativo o análisis detallado disponible en este informe.';
+
+      return {
+        id: r.id,
+        fechaInforme: r.fechaInforme instanceof Date ? r.fechaInforme.toISOString() : String(r.fechaInforme),
+        clienteId: r.clienteId,
+        clientName: displayName, 
+        resumenText: resumenText,
+        kpis: {
+          totalPatrimony,
+          debt,
+          ytdReturn: ytdStr,
+          monthlyReturn: r.history?.slice(-1)[0]?.rendimientoMensual ?? 0,
+          bankBreakdown
         }
-        if (y && m) {
-            const monthNum =
-                typeof m === 'number'
-                    ? m
-                    : this.monthToNumber(String(m));
-            if (y && monthNum) {
-                const d = new Date(Number(y), monthNum - 1, 1);
-                if (!isNaN(+d)) return d.toISOString();
-            }
+      };
+    });
+
+    // Ordenar: Más recientes primero
+    reports.sort((a, b) => new Date(b.fechaInforme).getTime() - new Date(a.fechaInforme).getTime());
+
+    // 3. Cálculo de Métricas Globales (Solo para Admin)
+    let globalMetrics;
+    if (user.role === 'admin' && reports.length > 0) {
+      // Filtrar último reporte por cliente para no duplicar AUM en la suma global
+      const latestPerClient = new Map<number, ReportFact>();
+      reports.forEach(r => {
+        if (!latestPerClient.has(r.clienteId) || new Date(r.fechaInforme) > new Date(latestPerClient.get(r.clienteId)!.fechaInforme)) {
+          latestPerClient.set(r.clienteId, r);
         }
-        if (obj?.createdAt) {
-            const d = new Date(obj.createdAt);
-            if (!isNaN(+d)) return d.toISOString();
-        }
-        return undefined;
+      });
+
+      const uniqueReports = Array.from(latestPerClient.values());
+      const totalAUM = uniqueReports.reduce((sum, r) => sum + r.kpis.totalPatrimony, 0);
+      const totalDebt = uniqueReports.reduce((sum, r) => sum + r.kpis.debt, 0);
+      
+      // Promedio simple de rendimiento YTD
+      const validReturns = uniqueReports
+        .map(r => parseFloat(r.kpis.ytdReturn))
+        .filter(n => !isNaN(n));
+      const avgReturn = validReturns.length 
+        ? (validReturns.reduce((a, b) => a + b, 0) / validReturns.length).toFixed(2) + '%' 
+        : '0%';
+
+      globalMetrics = {
+        totalAUM,
+        totalDebt,
+        activeClients: uniqueReports.length,
+        avgReturn
+      };
     }
 
-    private monthToNumber(m: string): number | undefined {
-        const s = m.toLowerCase();
-        const map: Record<string, number> = {
-            'enero': 1, 'febrero': 2, 'marzo': 3, 'abril': 4, 'mayo': 5, 'junio': 6,
-            'julio': 7, 'agosto': 8, 'septiembre': 9, 'setiembre': 9, 'octubre': 10,
-            'noviembre': 11, 'diciembre': 12, 'jan': 1, 'feb': 2, 'mar': 3, 'apr': 4, 'may': 5, 'jun': 6, 'jul': 7, 'aug': 8, 'sep': 9, 'oct': 10, 'nov': 11, 'dec': 12
-        };
-        return map[s] || undefined;
+    return {
+      role: user.role,
+      reports,
+      latestReport: reports[0],
+      globalMetrics
+    };
+  }
+
+  // Convierte los datos estructurados en texto plano para el Prompt del LLM
+  factsToPromptText(f: Facts): string {
+    const fmtDate = (iso: string) => new Date(iso).toLocaleDateString('es-ES', { year: 'numeric', month: 'long' });
+    const lines: string[] = [];
+
+    // --- SECCIÓN 1: CONTEXTO GLOBAL (Para responder "qué me dices de todos los reports") ---
+    lines.push(`ROL USUARIO: ${f.role.toUpperCase()}`);
+    
+    if (f.globalMetrics) {
+      lines.push(`\n=== RESUMEN GENERAL DE LA FIRMA (Estadísticas Globales) ===`);
+      lines.push(`• AUM Total (Activos bajo gestión): ${this.formatCurrency(f.globalMetrics.totalAUM)}`);
+      lines.push(`• Deuda Total Agregada: ${this.formatCurrency(f.globalMetrics.totalDebt)}`);
+      lines.push(`• Clientes Activos con informes: ${f.globalMetrics.activeClients}`);
+      lines.push(`• Rendimiento Promedio YTD Global: ${f.globalMetrics.avgReturn}`);
+      lines.push(`===========================================================\n`);
     }
 
-    private titleOf(d: any) {
-        return d?.title ?? d?.name ?? d?.filename ?? `Documento ${d?.id ?? ''}`;
+    // --- SECCIÓN 2: DETALLE INDIVIDUAL (Para responder sobre clientes específicos) ---
+    lines.push(`=== INFORMES INDIVIDUALES POR CLIENTE ===`);
+    
+    if (f.role === 'admin') {
+      // Agrupar reportes por NOMBRE DE CLIENTE
+      const byClient = f.reports.reduce((acc, r) => {
+        const key = r.clientName; 
+        acc[key] = acc[key] || [];
+        acc[key].push(r);
+        return acc;
+      }, {} as Record<string, ReportFact[]>);
+
+      Object.entries(byClient).forEach(([clientName, clientReports]) => {
+        lines.push(`\nCLIENTE: ${clientName}`);
+        // Limitamos a los 3 últimos informes para no saturar el prompt
+        clientReports.slice(0, 3).forEach(r => lines.push(this.formatSingleReport(r, fmtDate))); 
+      });
+    } else {
+      // Si es usuario normal, mostramos su historial reciente (últimos 5)
+      f.reports.slice(0, 5).forEach(r => lines.push(this.formatSingleReport(r, fmtDate)));
     }
 
-    private bankOf(d: any) {
-        return d?.bank ?? d?.entity ?? d?.issuer ?? undefined;
+    return lines.join('\n');
+  }
+
+  private formatSingleReport(r: ReportFact, dateFmt: (d: string) => string): string {
+    let txt = `   - [Informe ${dateFmt(r.fechaInforme)}]`;
+    txt += ` Patrimonio: ${this.formatCurrency(r.kpis.totalPatrimony)} |`;
+    txt += ` Deuda: ${this.formatCurrency(r.kpis.debt)} |`;
+    txt += ` Retorno YTD: ${r.kpis.ytdReturn}`;
+    
+    if (r.kpis.bankBreakdown && r.kpis.bankBreakdown.length > 0) {
+      txt += `\n     Bancos involucrados: ${r.kpis.bankBreakdown.join(', ')}`;
     }
-
-    private typeOf(d: any) {
-        return d?.type ?? d?.category ?? d?.docType ?? undefined;
+    
+    // Aquí se inyecta el texto del resumen o el aviso de "No hay resumen narrativo"
+    if (r.resumenText) { 
+      txt += `\n     Resumen/Notas: "${r.resumenText}"`;
     }
-
-    private byBestDateDesc(a: any, b: any) {
-        const da = this.asDateISO(a);
-        const db = this.asDateISO(b);
-        const ta = da ? +new Date(da) : 0;
-        const tb = db ? +new Date(db) : 0;
-        return tb - ta;
-    }
-
-    // -------- datos --------
-    private async loadUserDocs(userId: number) {
-        const candidates: any[] = [];
-        const wheresUser: Record<string, any>[] = [
-            { userId },
-            { clientId: userId },
-            { assignedUserId: userId },
-            { ownerId: userId },
-        ];
-        for (const w of wheresUser) {
-            try {
-                const rows = await this.docRepo.find({ where: w as any, take: 200 });
-                candidates.push(...rows);
-            } catch { }
-        }
-        const uniq = new Map<any, any>();
-        for (const d of candidates) uniq.set(d.id ?? JSON.stringify(d), d);
-        const docs = Array.from(uniq.values()).sort(this.byBestDateDesc.bind(this));
-        return docs;
-    }
-
-    private async loadGeneralDocs() {
-        const wheresGen: Record<string, any>[] = [
-            { isGeneral: true },
-            { userId: null },
-            { clientId: null },
-            { assignedUserId: null },
-        ];
-        for (const w of wheresGen) {
-            try {
-                const rows = await this.docRepo.find({ where: w as any, take: 50 });
-                if (rows?.length) return rows.sort(this.byBestDateDesc.bind(this));
-            } catch { }
-        }
-        return [] as any[];
-    }
-
-    private docToFact(d: any): Facts['documents'][number] {
-        const dateISO = this.asDateISO(d);
-        return {
-            id: d?.id,
-            title: this.titleOf(d),
-            bank: this.bankOf(d),
-            type: this.typeOf(d),
-            dateISO,
-            year: d?.year ?? undefined,
-            month: d?.month ?? undefined,
-        };
-    }
-
-    private async loadProfits(userId: number) {
-        const wheres = [{ userId }, { clientId: userId }, { ownerId: userId }, { accountUserId: userId }];
-        const rows: any[] = [];
-        for (const w of wheres) {
-            try {
-                const r = await this.profitRepo.find({ where: w, take: 500 });
-                if (r?.length) rows.push(...r);
-            } catch { }
-        }
-        return rows;
-    }
-
-    private profitDateISO(p: any): string | undefined {
-        if (p?.date) {
-            const d = new Date(p.date);
-            if (!isNaN(+d)) return d.toISOString();
-        }
-        if (p?.year && p?.month) {
-            const m = typeof p.month === 'number' ? p.month : this.monthToNumber(String(p.month));
-            if (m) {
-                const d = new Date(Number(p.year), m - 1, 1);
-                if (!isNaN(+d)) return d.toISOString();
-            }
-        }
-        if (p?.createdAt) {
-            const d = new Date(p.createdAt);
-            if (!isNaN(+d)) return d.toISOString();
-        }
-        return undefined;
-    }
-
-    // -------- API público --------
-    async buildFacts(userId: number): Promise<Facts> {
-        const docsUser = await this.loadUserDocs(userId);
-        const docsGeneral = await this.loadGeneralDocs();
-
-        const docFacts = docsUser.slice(0, 30).map(d => this.docToFact(d));
-        const genFacts = docsGeneral.slice(0, 10).map(d => this.docToFact(d));
-
-        // Último por banco
-        const latestByBank: Facts['latestByBank'] = {};
-        for (const d of docsUser) {
-            const bank = this.bankOf(d);
-            if (!bank) continue;
-            if (!latestByBank[bank]) latestByBank[bank] = this.docToFact(d);
-        }
-
-        // Profits
-        const profits = await this.loadProfits(userId);
-        const profitsByBank: Facts['profitsByBank'] = {};
-        let lastProfit: Facts['lastProfit'] | undefined;
-
-        for (const p of profits) {
-            const bank = p?.bank ?? p?.entity ?? undefined;
-            const currency = (p?.currency ?? 'EUR').toUpperCase();
-            const amount = Number(p?.amount ?? 0);
-            const dateISO = this.profitDateISO(p);
-            if (!profitsByBank[bank || '—']) profitsByBank[bank || '—'] = { total: 0, currency };
-            // Acumulamos por divisa homogénea (si cambian divisas, se sobreescribe a la última; para algo mejor, partir por divisa)
-            profitsByBank[bank || '—'].total += isFinite(amount) ? amount : 0;
-            profitsByBank[bank || '—'].currency = currency;
-            // Último visto
-            if (!lastProfit || (dateISO && lastProfit.dateISO && +new Date(dateISO) > +new Date(lastProfit.dateISO))) {
-                lastProfit = { bank, amount, currency, dateISO, label: p?.label ?? p?.concept ?? undefined };
-            }
-        }
-
-        return {
-            documents: docFacts,
-            latestDocument: docFacts[0],
-            latestByBank,
-            generalDocuments: genFacts,
-            profitsByBank,
-            lastProfit,
-        };
-    }
-
-    factsToPromptText(f: Facts) {
-        const fmtDate = (iso?: string) => (iso ? new Date(iso).toLocaleDateString('es-ES') : '—');
-
-        const docsLines = f.documents.map(d => `• ${fmtDate(d.dateISO)} — ${d.title}${d.bank ? ` (${d.bank})` : ''}${d.type ? ` [${d.type}]` : ''}`);
-        const genLines = f.generalDocuments.map(d => `• ${fmtDate(d.dateISO)} — ${d.title}${d.bank ? ` (${d.bank})` : ''}${d.type ? ` [${d.type}]` : ''}`);
-
-        const latestByBankLines = Object.entries(f.latestByBank).map(([bank, d]) => `• ${bank}: ${fmtDate(d?.dateISO)} — ${d?.title ?? '—'}`);
-
-        const profitsLines = Object.entries(f.profitsByBank).map(([bank, s]) =>
-            `• ${bank}: total aprox. ${s.total.toLocaleString('es-ES', { minimumFractionDigits: 2 })} ${s.currency}` +
-            (f.lastProfit?.bank === bank && f.lastProfit?.dateISO ? ` (último ${fmtDate(f.lastProfit.dateISO)})` : '')
-        );
-
-        return [
-            'HECHOS DISPONIBLES (no los cites literalmente, úsalos para responder):',
-            f.latestDocument ? `Último documento: ${fmtDate(f.latestDocument.dateISO)} — ${f.latestDocument.title}${f.latestDocument.bank ? ` (${f.latestDocument.bank})` : ''}${f.latestDocument.type ? ` [${f.latestDocument.type}]` : ''}` : 'Sin documentos del usuario.',
-            latestByBankLines.length ? `Último por banco:\n${latestByBankLines.join('\n')}` : '—',
-            docsLines.length ? `Documentos recientes:\n${docsLines.join('\n')}` : '—',
-            genLines.length ? `Documentos generales:\n${genLines.join('\n')}` : '—',
-            profitsLines.length ? `Resumen de beneficios por banco:\n${profitsLines.join('\n')}` : 'Sin beneficios registrados.',
-        ].join('\n');
-    }
+    return txt;
+  }
 }
