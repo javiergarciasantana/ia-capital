@@ -28,18 +28,25 @@ export class UsersService {
     return this.userRepository.find();
   }
 
+  async findAllClients(): Promise<User[]> {
+    return this.userRepository.find({ where: { role: 'client' } });
+  }
+
   async create(dto: CreateUserDto): Promise<User> {
     const exists = await this.findByEmail(dto.email);
     if (exists) throw new BadRequestException('El email ya existe');
 
     const user = this.userRepository.create({
-      name: dto.name,
-      surname: dto.surname,
       email: dto.email,
       password: await bcrypt.hash(dto.password, 10),
       role: dto.role ?? 'client',
       isActive: dto.isActive ?? true,
-      profile: dto.profile ?? null,
+      profile: dto.profile
+        ? {
+            ...dto.profile,
+            feeInterval: dto.profile.feeInterval as 'quarterly' | 'biannual' | undefined,
+          }
+        : null,
     });
 
     const saved = await this.userRepository.save(user);

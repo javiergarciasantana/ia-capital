@@ -6,9 +6,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { XlsxModule } from './xlsx/xlsx.module'
-import { DocumentsModule } from './documents/documents.module';
+import { ReportsModule } from './reports/reports.module';
 import { PrivateAiModule } from './private-ai/private-ai.module';
-import { ProfitsModule } from './profits/profits.module';
 import { AiChatModule } from './ai-chat/ai-chat.module';
 
 @Module({
@@ -64,9 +63,8 @@ import { AiChatModule } from './ai-chat/ai-chat.module';
     AuthModule,
     UsersModule,
     XlsxModule,
-    DocumentsModule,
+    ReportsModule,
     PrivateAiModule,
-    ProfitsModule,
     AiChatModule,
   ],
 })

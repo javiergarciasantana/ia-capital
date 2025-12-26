@@ -23,15 +23,12 @@ export class CreateUserProfileDto {
     @IsOptional() @IsDateString() birthDate?: string;
 
     @IsOptional() @IsString() preferredLanguage?: string;
+    @IsOptional() @IsString() feeInterval?: string;
+
     @IsOptional() @IsString() notes?: string;
 }
 
 export class CreateUserDto {
-    @IsString() @IsNotEmpty()
-      name!: string;
-    
-    @IsOptional() @IsString()
-    surname?: string;
 
     @IsEmail() @IsNotEmpty()
     email!: string;

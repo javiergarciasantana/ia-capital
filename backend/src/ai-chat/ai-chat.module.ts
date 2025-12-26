@@ -6,10 +6,6 @@ import { Conversation } from './entities/conversation.entity';
 import { Message } from './entities/message.entity';
 import { OllamaClient } from './ollama.client';
 
-// Entidades reales del dominio
-import { Document } from '../documents/document.entity';
-import { Profit } from '../profits/profit.entity';
-
 // Nuevo agregador de “hechos”
 import { UserFactsService } from './user-facts.service';
 import { ReportsModule } from '../reports/reports.module';
@@ -17,7 +13,7 @@ import { UsersModule } from '../users/users.module';
 
 import { UsersService } from '../users/users.service'
 @Module({
-  imports: [TypeOrmModule.forFeature([Conversation, Message, Document, Profit]), ReportsModule, UsersModule],
+  imports: [TypeOrmModule.forFeature([Conversation, Message]), ReportsModule, UsersModule],
   controllers: [AiChatController],
   providers: [AiChatService, OllamaClient, UserFactsService],
   exports: [UserFactsService],

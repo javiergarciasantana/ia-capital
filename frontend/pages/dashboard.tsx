@@ -1051,7 +1051,7 @@ function Dashboard() {
                                 </tr>
                               </thead>
                               <tbody>
-                                {reportPreview.history?.slice(-6).map((h, idx) => (
+                                {reportPreview.history?.slice(0, 6).map((h, idx) => (
                                   <tr key={idx} style={{ borderBottom: '1px solid #f0f0f0' }}>
                                     <td style={{ padding: '10px 16px', color: '#555' }}>{new Date(h.fecha).toLocaleDateString()}</td>
                                     <td style={{ padding: '10px 16px', textAlign: 'right', fontWeight: 500 }}>{h.valorNeto?.toLocaleString()}</td>

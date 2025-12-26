@@ -19,34 +19,57 @@ async function seed() {
   const existingAdmin = await usersService.findByEmail('admin@ia.capital');
   if (!existingAdmin) {
     await usersService.create({
-      name: 'Iñaki',
-      surname: 'Arcocha',
       email: 'admin@ia.capital',
       password: adminPassword,
       role: 'admin',
+      profile: {
+        firstName: 'Iñaki',
+        lastName: 'Arcocha',
+      },
     });
     console.log('Admin creado');
   } else {
     // Always update the password for admin
     await usersService.update(existingAdmin.id, { password: adminPassword });
-    console.log('Admin password updated', adminPassword);
+    // Update profile name and surname if needed
+    await usersService.update(existingAdmin.id, {
+      profile: {
+        firstName: 'Iñaki',
+        lastName: 'Arcocha',
+      },
+    });
+    console.log('Admin password and profile updated', adminPassword);
   }
-
-
 
   // Lista de clientes a insertar
   const clients = [
     'gongroup@ia.capital',
     'telma@ia.capital',
     'horacio@ia.capital',
+    'alex@ia.capital',
+    'andrea@ia.capital',
+    'jacobo@ia.capital',
+    'mijares@ia.capital',
+    'neranju@ia.capital',
+    'nina@ia.capital',
     'tovar@ia.capital',
+    'troglo@ia.capital',
+    'urimer@ia.capital',
   ];
 
   const clientNames = [
     'GON GROUP',
     'Telma',
     'Horacio',
+    'Alex',
+    'Andrea',
+    'Jacobo',
+    'Mijares',
+    'Neranju',
+    'Nina',
     'Tovar',
+    'Troglo',
+    'Urimer',
   ]
 
   const clientPassword = 'client123';
@@ -58,20 +81,29 @@ async function seed() {
     const exists = await usersService.findByEmail(email);
     if (!exists) {
       await usersService.create({
-        name: clientName,
         email,
         password: clientPassword,
         role: 'client',
         isActive: true,
+        profile: {
+          firstName: clientNames[i],
+          feeInterval: 'quarterly',
+        }
       });
       console.log(`Cliente ${email} (${clientName}) creado`);
     } else {
       // Always update the password for client
       await usersService.update(exists.id, { password: clientPassword });
       console.log(`Cliente ${email} password updated`);
-    }
-  }
 
+      await usersService.update(exists.id, {
+        profile: {
+          firstName: clientNames[i],
+        },
+      })
+    }
+
+  }
   await app.close();
 }
 seed();

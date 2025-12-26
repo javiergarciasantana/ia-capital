@@ -142,8 +142,8 @@ export class AiChatService {
     // Convertimos esa estructura a texto formateado para el prompt
     const factsText = this.facts.factsToPromptText(f);
     const fullUser = await this.usersService.findById(user.id);
-    console.log("username", fullUser.name);
-    const userLabel = fullUser.name 
+    console.log("username", fullUser.profile?.firstName);
+    const userLabel = fullUser.profile?.firstName 
 
     const system: Array<{ role: Role; content: string }> = [
       {

@@ -14,7 +14,7 @@ export class UserProfile {
     id: number;
 
     // Identificación / PII
-    @Column({ nullable: true }) firstName?: string;
+    @Column({ nullable: false }) firstName?: string;
     @Column({ nullable: true }) lastName?: string;
     @Column({ nullable: true }) phone?: string;
     @Column({ nullable: true }) country?: string;
@@ -25,6 +25,8 @@ export class UserProfile {
     @Column({ type: 'date', nullable: true }) birthDate?: string; // YYYY-MM-DD
 
     // Preferencias
+    @Column({ type: 'varchar', nullable: true })
+    feeInterval: 'quarterly' | 'biannual';
     @Column({ nullable: true }) preferredLanguage?: string; // 'es' | 'en'...
     @Column({ nullable: true }) preferredCurrency?: string; // 'EUR', 'USD'...
 
