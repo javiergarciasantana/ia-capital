@@ -36,14 +36,6 @@ const CardStyle = {
 };
 
 // --- TYPES ---
-type HistoryItem = {
-  id: number;
-  fecha: string;
-  valorNeto: number;
-  rendimientoMensual: number;
-  rendimientoYTD: number;
-};
-
 type DistributionItem = {
   id: number;
   categoria: string;
@@ -67,9 +59,17 @@ type ReportData = {
     fueraCustodia: number;
     patrimonioNeto: number;
   };
-  history: HistoryItem[];
   distribution: DistributionItem[];
   child_distribution: DistributionItem[];
+};
+
+type HistoryData = {
+  id: number;
+  clienteId: number;
+  fecha: string;
+  valorNeto: number;
+  rendimientoMensual: number;
+  rendimientoYTD: number;
 };
 
 type DashboardMetrics = {
@@ -295,7 +295,7 @@ const ClientCirclesPanel = ({
                 fontFamily: 'Segoe UI, Merriweather, sans-serif',
                 marginBottom: 2,
               }}>
-                {(client?.name?.charAt(0)?.toUpperCase()) + (client?.surname?.charAt(0)?.toUpperCase() || '')}
+                {(client?.profile.firstName?.charAt(0)?.toUpperCase()) + (client?.profile.lastName?.charAt(0)?.toUpperCase() || '')}
               </div>
               <div style={{
                 fontSize: 12,
@@ -308,7 +308,7 @@ const ClientCirclesPanel = ({
                 textOverflow: 'ellipsis',
                 maxWidth: 80,
               }}>
-                {client.name + (client.surname ? ' ' + client.surname : '')}
+                {getClientNameById(client?.id)}
               </div>
             </div>
             {/* Hover Action Circles */}
@@ -497,14 +497,25 @@ function Dashboard() {
   // --- STATE ---
   const [clients, setClients] = useState<any[]>([]);
   const [lastDoc, setLastDoc] = useState<any>(null);
-  const [dateRange, setDateRange] = useState({
-    from: new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0],
-    to: new Date().toISOString().split('T')[0]
+  const [dateRange, setDateRange] = useState(() => {
+    const today = new Date();
+    const to = today.toISOString().split('T')[0];
+    const lastMonth = new Date(today);
+    lastMonth.setMonth(today.getMonth() - 1);
+    // Handle edge case for months with fewer days
+    if (lastMonth.getMonth() === today.getMonth()) {
+      // If setMonth overflowed (e.g. March 31 - 1 month = March 3), set to last day of previous month
+      lastMonth.setDate(0);
+    }
+    const from = lastMonth.toISOString().split('T')[0];
+    return { from, to };
   });
   const [reports, setReports] = useState<ReportData[]>([]);
+  const [history, setHistory] = useState<HistoryData[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [reportPreview, setReportPreview] = useState<ReportData | null>(null);
+  const [historyPreview, setHistoryPreview] = useState<HistoryData[]>([]);
   const [showAddClientModal, setShowAddClientModal] = useState(false);
   const [addClientLoading, setAddClientLoading] = useState(false);
   const [addClientError, setAddClientError] = useState<string | null>(null);
@@ -540,7 +551,7 @@ function Dashboard() {
   const getClientNameById = (id: number) => {
     const client = clients.find(c => c.id === id);
     if (!client) return `#${id}`;
-    return `${client.name}${client.surname ? ' ' + client.surname : ''}`;
+    return `${client.profile?.firstName}${client.profile?.lastName ? ' ' + client.profile?.lastName : ''}`;
   };
 
   // --- FETCH CLIENTS ---
@@ -623,43 +634,41 @@ function Dashboard() {
   // --- FETCH REPORTS / DOCS ---
   useEffect(() => {
     if (!auth?.token) return;
-
-    if (auth.role === 'admin') {
-      // Admin Fetch
-      const fetchReports = async () => {
-        setLoading(true);
-        try {
-          const res = await fetch(`${API_BASE}/xlsx/all/${dateRange.from}/${dateRange.to}`, {
-            headers: { Authorization: `Bearer ${auth.token}` },
-          });
-          if (res.ok) {
-            const json = await res.json();
-            const data = Array.isArray(json) ? json : json.data;
-            setReports(Array.isArray(data) ? data : []);
-          }
-        } catch (e) { console.error(e); }
-        finally { setLoading(false); }
-      };
-      fetchReports();
-    } else {
-      // Client Fetch (Original Logic)
-      const fetchLast = async () => {
-        try {
-          const res = await fetch(`${API_BASE}/documents`, {
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${auth.token}` },
-          });
-          if (res.ok) {
-            const data = await res.json();
-            if (Array.isArray(data)) {
-              const visibles = data.filter((doc: any) => !doc.user || doc.user.id === auth.userId);
-              if (visibles.length > 0) setLastDoc(visibles[0]);
-            }
-          }
-        } catch (e) { console.error(e); }
-      };
-      fetchLast();
-    }
+    const fetchReports = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`${API_BASE}/reports/all/${dateRange.from}/${dateRange.to}`, {
+          headers: { Authorization: `Bearer ${auth.token}` },
+        });
+        if (res.ok) {
+          const json = await res.json();
+          const data = Array.isArray(json) ? json : json.data;
+          setReports(Array.isArray(data) ? data : []);
+        }
+      } catch (e) { console.error(e); }
+      finally { setLoading(false); }
+    };
+    fetchReports();
   }, [auth, dateRange]);
+
+  useEffect(() => {
+    if(!auth?.token) return;
+    const fetchHistory = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`${API_BASE}/history/all/${dateRange.to}`, {
+          headers: { Authorization: `Bearer ${auth.token}` },
+        });
+        if (res.ok) {
+          const json = await res.json();
+          const data = Array.isArray(json) ? json : json.data;
+          setHistory(Array.isArray(data) ? data : []);
+        }
+      } catch (e) { console.error(e); }
+      finally { setLoading(false); }
+    };
+    fetchHistory();
+  }, [auth, dateRange])
 
   if (!auth) return <div className="loading-container">Cargando...</div>;
 
@@ -904,7 +913,16 @@ function Dashboard() {
                                 fontWeight: 600,
                                 color: '#475569'
                               }}
-                              onClick={() => { setReportPreview(report); setModalOpen(true); }}
+                              onClick={() => { 
+                                setReportPreview(report); 
+                                // Find the history entry for this report's client
+                                const clientHistory = history.filter(
+                                  h => h.clienteId === report.clienteId
+                                );
+                                console.log("History", history)
+                                setHistoryPreview(clientHistory);
+                                setModalOpen(true); 
+                              }}
                             >
                               Ver
                             </button>
@@ -916,7 +934,7 @@ function Dashboard() {
                 </div>
               </div>
               {/* MODAL */}
-              {modalOpen && reportPreview && (
+              {modalOpen && reportPreview && historyPreview && (
                 <div style={{
                   position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
                   background: 'rgba(26, 35, 64, 0.6)', backdropFilter: 'blur(4px)',
@@ -1051,16 +1069,22 @@ function Dashboard() {
                                 </tr>
                               </thead>
                               <tbody>
-                                {reportPreview.history?.slice(0, 6).map((h, idx) => (
+                                {historyPreview?.slice(-6).map((h, idx) => (
                                   <tr key={idx} style={{ borderBottom: '1px solid #f0f0f0' }}>
-                                    <td style={{ padding: '10px 16px', color: '#555' }}>{new Date(h.fecha).toLocaleDateString()}</td>
+                                    <td style={{ padding: '10px 16px', color: '#555' }}>
+                                      {new Date(h.fecha).toLocaleDateString('es-ES', {
+                                        day: '2-digit',
+                                        month: '2-digit',
+                                        year: 'numeric'
+                                      })}
+                                    </td>
                                     <td style={{ padding: '10px 16px', textAlign: 'right', fontWeight: 500 }}>{h.valorNeto?.toLocaleString()}</td>
                                     <td style={{ padding: '10px 16px', textAlign: 'right', color: (h.rendimientoMensual || 0) >= 0 ? '#217a3c' : '#e74c3c' }}>
-                                      {(h.rendimientoMensual || 0) > 0 ? '+' : ''}{h.rendimientoMensual?.toFixed(2)}%
+                                      {(h.rendimientoMensual || 0) > 0 ? '+' : ''}{h.rendimientoMensual}%
                                     </td>
                                   </tr>
                                 ))}
-                                {(!reportPreview.history || reportPreview.history.length === 0) && (
+                                {(!historyPreview || historyPreview.length === 0) && (
                                   <tr><td colSpan={3} style={{ padding: '16px', textAlign: 'center', color: '#999' }}>Sin histórico reciente</td></tr>
                                 )}
                               </tbody>
@@ -1208,6 +1232,7 @@ const UserReportsDashboard = ({
   formatDate,
 }: any) => {
   const [userReports, setUserReports] = useState<ReportData[]>([]);
+  const [userHistory, setUserHIstory] = useState<ReportData[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedYear, setSelectedYear] = useState<string>('');
   const [selectedMonth, setSelectedMonth] = useState<string>('');
@@ -1217,7 +1242,7 @@ const UserReportsDashboard = ({
   useEffect(() => {
     if (!auth?.token) return;
     setLoading(true);
-    fetch(`${API_BASE}/xlsx/myinfo/${dateRange.from}/${dateRange.to}`, {
+    fetch(`${API_BASE}/reports/myinfo/${dateRange.from}/${dateRange.to}`, {
       headers: { Authorization: `Bearer ${auth.token}` },
     })
       .then((res) => res.json())
@@ -1232,6 +1257,20 @@ const UserReportsDashboard = ({
           setSelectedMonth((d.getMonth() + 1).toString().padStart(2, '0'));
           setSelectedReport(sorted[0]);
         }
+      })
+      .finally(() => setLoading(false));
+  }, [auth?.token, auth?.userId]);
+
+    useEffect(() => {
+    if (!auth?.token) return;
+    setLoading(true);
+    fetch(`${API_BASE}/history/myinfo/${dateRange.to}`, {
+      headers: { Authorization: `Bearer ${auth.token}` },
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        const arr = Array.isArray(data) ? data : data.data;
+        setUserHIstory(arr || []);
       })
       .finally(() => setLoading(false));
   }, [auth?.token, auth?.userId]);
@@ -1254,7 +1293,7 @@ const UserReportsDashboard = ({
   // Extra metrics
   const extraMetrics = useMemo(() => {
     if (!selectedReport) return null;
-    const hist = selectedReport.history || [];
+    const hist = history || [];
     const last = hist[0];
     const first = hist[hist.length - 1];
     const totalReturn = last && first ? ((last.valorNeto / first.valorNeto - 1) * 100) : 0;
@@ -1269,6 +1308,13 @@ const UserReportsDashboard = ({
       months: hist.length,
     };
   }, [selectedReport]);
+
+  function filterHistoryUpToDate(history: any[], toDate: string | Date) {
+
+    console.log("history: " + history)
+    const cutoff = typeof toDate === 'string' ? new Date(toDate) : toDate;
+    return history.filter(h => new Date(h.fecha) <= cutoff);
+  }
 
   return (
     <div style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 0' }}>
@@ -1470,19 +1516,25 @@ const UserReportsDashboard = ({
                       </tr>
                     </thead>
                     <tbody>
-                      {(selectedReport.history || []).slice(0, 12).map((h, idx) => (
+                      {(filterHistoryUpToDate(userHistory, selectedReport.fechaInforme) || []).slice(-12).map((h, idx) => (
                         <tr key={idx} style={{ borderBottom: '1px solid #f0f0f0' }}>
-                          <td style={{ padding: '10px 16px', color: '#555' }}>{new Date(h.fecha).toLocaleDateString()}</td>
+                          <td style={{ padding: '10px 16px', color: '#555' }}>
+                            {new Date(h.fecha).toLocaleDateString('es-ES', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric'
+                            })}
+                          </td>
                           <td style={{ padding: '10px 16px', textAlign: 'right', fontWeight: 500 }}>{h.valorNeto?.toLocaleString()}</td>
                           <td style={{ padding: '10px 16px', textAlign: 'right', color: (h.rendimientoMensual || 0) >= 0 ? '#217a3c' : '#e74c3c' }}>
-                            {(h.rendimientoMensual || 0) > 0 ? '+' : ''}{h.rendimientoMensual?.toFixed(2)}%
+                            {(h.rendimientoMensual || 0) > 0 ? '+' : ''}{h.rendimientoMensual}%
                           </td>
                           <td style={{ padding: '10px 16px', textAlign: 'right', color: (h.rendimientoYTD || 0) >= 0 ? '#217a3c' : '#e74c3c' }}>
-                            {(h.rendimientoYTD || 0) > 0 ? '+' : ''}{h.rendimientoYTD?.toFixed(2)}%
+                            {(h.rendimientoYTD || 0) > 0 ? '+' : ''}{h.rendimientoYTD}%
                           </td>
                         </tr>
                       ))}
-                      {(!selectedReport.history || selectedReport.history.length === 0) && (
+                      {(!filterHistoryUpToDate(userHistory, selectedReport.fechaInforme) || filterHistoryUpToDate(history, selectedReport.fechaInforme).length < 0) && (
                         <tr><td colSpan={4} style={{ padding: '16px', textAlign: 'center', color: '#999' }}>Sin histórico reciente</td></tr>
                       )}
                     </tbody>

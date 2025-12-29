@@ -137,7 +137,7 @@ function AdminPanel() {
   const getClientNameById = (id: number) => {
     const client = clients.find(c => c.id === id);
     if (!client) return `#${id}`;
-    return `${client.name}${client.surname ? ' ' + client.surname : ''}`;
+    return `${client.profile?.firstName}${client.profile?.lastName ? ' ' + client.profile?.lastName : ''}`;
   };
 
   // Fetch Clients
@@ -285,14 +285,14 @@ function AdminPanel() {
           onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.08)'}
           onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
             >
-          {(client?.name?.charAt(0)?.toUpperCase()) + (client?.surname?.charAt(0)?.toUpperCase() || '')}
+          {(client?.profile?.firstName.charAt(0)?.toUpperCase()) + (client?.profile?.lastName?.charAt(0)?.toUpperCase() || '')}
             </div>
             <h3 style={{
           fontSize: '18px', fontWeight: 600, color: '#1a2340', marginBottom: '4px',
           fontFamily: 'Segoe UI, Merriweather, sans-serif', letterSpacing: '1px',
           textAlign: 'center',
             }}>
-          {(client?.name) + (client.surname ? ' ' + client.surname : '')}
+              {getClientNameById(client?.id)}
             </h3>
           </div>
           
@@ -466,7 +466,13 @@ function AdminPanel() {
                       <tbody>
                         {reportPreview.historico?.slice(-6).map((h, idx) => (
                           <tr key={idx} style={{ borderBottom: '1px solid #f0f0f0' }}>
-                            <td style={{ padding: '10px 16px', color: '#555' }}>{new Date(h.fecha).toLocaleDateString()}</td>
+                            <td style={{ padding: '10px 16px', color: '#555' }}>
+                              {new Date(h.fecha).toLocaleDateString('es-ES', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric'
+                              })}
+                            </td>
                             <td style={{ padding: '10px 16px', textAlign: 'right', fontWeight: 500 }}>{h.valorNeto?.toLocaleString()}</td>
                             <td style={{ padding: '10px 16px', textAlign: 'right', color: (h.rendimientoMensual || 0) >= 0 ? '#217a3c' : '#e74c3c' }}>
                               {(h.rendimientoMensual || 0) > 0 ? '+' : ''}{h.rendimientoMensual?.toFixed(2)}%

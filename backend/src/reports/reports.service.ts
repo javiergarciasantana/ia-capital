@@ -3,7 +3,6 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { Report } from './report.entity';
-import { History } from './history.entity';
 import { Distribution } from './distribution.entity';
 import { ChildDistribution } from './child-distribution.entity';
 
@@ -11,21 +10,16 @@ import { ChildDistribution } from './child-distribution.entity';
 export class ReportsService {
   constructor(
     @InjectRepository(Report) private reportRepo: Repository<Report>,
-    @InjectRepository(History) private HistoryRepo: Repository<History>,
     @InjectRepository(Distribution) private DistributionRepo: Repository<Distribution>,
     @InjectRepository(ChildDistribution) private ChildDistributionRepo: Repository<ChildDistribution>,
   ) {}
 
   async saveReport(reportDto: any) {
-    console.log("History complete obj:", reportDto.historico)
     const report = this.reportRepo.create({
       clienteId: reportDto.clienteId,
       fechaInforme: reportDto.fechaInforme,
       resumenEjecutivo: reportDto.resumenEjecutivo,
       snapshot: reportDto.snapshot,
-      history: Array.isArray(reportDto.historico)
-      ? reportDto.historico.slice().reverse().map((h: any) => this.HistoryRepo.create(h))
-      : [],
       distribution: Array.isArray(reportDto.distribucion)
       ? reportDto.distribucion.map((d: any) => this.DistributionRepo.create(d))
       : [],
@@ -38,7 +32,7 @@ export class ReportsService {
 
   async getReports() {
     const reports = await this.reportRepo.find({
-      relations: ['history', 'distribution', 'child_distribution'],
+      relations: ['distribution', 'child_distribution'],
       order: { fechaInforme: 'ASC' },
     });
 
@@ -60,13 +54,11 @@ export class ReportsService {
     fromDate.setUTCHours(0, 0, 0, 0);
     toDate.setUTCHours(23, 59, 59, 999);
 
-    console.log('Querying reports from', fromDate.toISOString(), 'to', toDate.toISOString());
-
     const reports = await this.reportRepo.find({
       where: {
         fechaInforme: Between(fromDate, toDate),
       },
-      relations: ['history', 'distribution', 'child_distribution', 'client'],
+      relations: ['distribution', 'child_distribution', 'client'],
       order: { fechaInforme: 'ASC' },
     });
     return reports;
@@ -77,7 +69,7 @@ export class ReportsService {
       where: {
         clienteId: Number(id)
       },
-      relations: ['history', 'distribution', 'child_distribution'],
+      relations: ['distribution', 'child_distribution'],
       order: { fechaInforme: 'ASC' },
     });
 
@@ -92,14 +84,12 @@ export class ReportsService {
     fromDate.setUTCHours(0, 0, 0, 0);
     toDate.setUTCHours(23, 59, 59, 999);
 
-    console.log('Querying reports from', fromDate.toISOString(), 'to', toDate.toISOString());
-
     const reports = await this.reportRepo.find({
       where: {
         clienteId: Number(id),
         fechaInforme: Between(fromDate, toDate)
       },
-      relations: ['history', 'distribution', 'child_distribution'],
+      relations: ['distribution', 'child_distribution'],
       order: { fechaInforme: 'ASC' },
     });
     return reports;
@@ -107,10 +97,10 @@ export class ReportsService {
 
   async deleteAllReports() {
     // Use delete({}) instead of clear() to avoid TRUNCATE and FK constraint errors
-    const histories = await this.HistoryRepo.find();
-    for (const history of histories) {
-      await this.HistoryRepo.delete(history.id);
-    }
+    // const histories = await this.HistoryRepo.find();
+    // for (const history of histories) {
+    //   await this.HistoryRepo.delete(history.id);
+    // }
 
     const distributions = await this.DistributionRepo.find();
     for (const distribution of distributions) {

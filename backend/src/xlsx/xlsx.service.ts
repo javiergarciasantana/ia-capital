@@ -93,8 +93,8 @@ export class XlsxService
       .filter(r => 
         r && 
         r[8] && 
-        (r[8] instanceof Date || r[8].toString().match(/^\d{4}/)) &&
-        XlsxService.cleanNum(r[9]) !== 0
+        (r[8] instanceof Date || r[8].toString().match(/^\d{1,4}[-/]\d{1,2}([-/]\d{1,4})?$/)) 
+                              && XlsxService.cleanNum(r[9]) !== 0
       )
       .map(r => ({
         fecha: r[8],
