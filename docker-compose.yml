@@ -32,6 +32,8 @@ services:
       - ./backend:/app/backend
       - /app/backend/node_modules
       - ./uploads:/app/uploads
+      - /Users/javiersantana/Desktop/ia-reports:/app/reports
+
     environment:
       DB_HOST: db
       DB_PORT: "5432"

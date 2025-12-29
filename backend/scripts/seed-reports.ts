@@ -5,10 +5,9 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from '../src/app.module';
 import { UsersService } from '../src/users/users.service';
 
-const XLSX_DIR = ('/Users/javiersantana/Desktop/ia-reports'); // Adjust as needed
-const API_BASE = 'http://localhost:3001/api/xlsx'; // Adjust port/path as needed
-const ADMIN_JWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjUsImVtYWlsIjoiYWRtaW5AaWEuY2FwaXRhbCIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc2Njc0MjIwMiwiZXhwIjoxNzY2NzQ5NDAyfQ.0vEPO4RmbuOwnGbLhQEAkM0LJ6RPapINSlV79NJSZHY'; // You need to authenticate as admin
-
+const XLSX_DIR = '/app/reports/'; // Adjust as needed
+const API_BASE = 'http://localhost:5000/api/xlsx'; // Adjust port/path as needed
+const ADMIN_JWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjUsImVtYWlsIjoiYWRtaW5AaWEuY2FwaXRhbCIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc2NzAwODU5NywiZXhwIjoxNzY3MDE1Nzk3fQ.P8y48Za1rnOwRqcEBpfgwFJsHzoNMDm4yz5zekK7y-M'
 async function main() {
   const app = await NestFactory.createApplicationContext(AppModule);
   const usersService = app.get(UsersService);
