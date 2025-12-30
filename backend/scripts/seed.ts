@@ -101,9 +101,9 @@ async function seed() {
       await usersService.update(exists.id, {
         profile: {
           firstName: clientNames[i],
-          feePercentage: Number( 0.00315),
+          feePercentage: Number( 0.0035),
           feeInterval: 'quarterly',
-          preferredCurrency: 'EUR'
+          preferredCurrency: 'USD'
         },
       })
     }

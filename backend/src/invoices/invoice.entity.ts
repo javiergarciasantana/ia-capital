@@ -1,5 +1,6 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, ManyToOne, JoinColumn} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToOne, ManyToOne, JoinColumn} from 'typeorm';
 import { User } from '../users/user.entity';
+import { InvoicePdf } from './invoicePdf.entity';
 
 @Entity()
 export class Invoice {
@@ -22,4 +23,7 @@ export class Invoice {
   @JoinColumn({ name: 'clienteId' })
   client: User;
 
+  @OneToOne(() => InvoicePdf, (invoicePdf) => invoicePdf.pdf, { cascade: true })
+  @JoinColumn()
+  invoicePdf: InvoicePdf;
 }

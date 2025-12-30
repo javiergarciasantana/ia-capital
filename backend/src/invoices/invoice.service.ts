@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Invoice } from './invoice.entity';
+import { InvoicePdf } from './invoicePdf.entity';
 import { UsersService } from '../users/users.service';
 import { ReportsService } from '../reports/reports.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
@@ -15,6 +16,7 @@ export class InvoiceService {
 
   constructor(
     @InjectRepository(Invoice) private invoiceRepo: Repository<Invoice>,
+    @InjectRepository(InvoicePdf) private invoicePdfRepo: Repository<InvoicePdf>,
     private readonly usersService: UsersService,
     private readonly reportsService: ReportsService,
   ) {}
@@ -84,7 +86,7 @@ export class InvoiceService {
     if (interval === 'quarterly') timeFactor = 0.25;
     else if (interval === 'biannual') timeFactor = 0.5;
     
-    const amount = ((patrimonioNeto - 200000) * feePercentage) * timeFactor;
+    const amount = ((patrimonioNeto) * feePercentage) * timeFactor;
     
     if (amount <= 0) {
       this.logger.log(`Calculated amount is 0 for client ${client.email}. Skipping.`);
@@ -96,24 +98,29 @@ export class InvoiceService {
       fechaFactura: new Date(),
       descripcion: `Management Fee - ${(interval ?? 'undefined').charAt(0).toUpperCase() + (interval ?? 'undefined').slice(1)} (${new Date().getFullYear()})`,
       importe: parseFloat(amount.toFixed(2)),
-      client: client
+      client: client,
+      
     });
-
+    
     const savedInvoice = await this.invoiceRepo.save(newInvoice);
-
     // 4. Generate PDF
-    const pdfBuffer = await this.generateClassyPdf(savedInvoice, client, patrimonioNeto, feePercentage, timeFactor);
-
+    const pdfBuffer = await this.generateClassyPdf(newInvoice, client, patrimonioNeto, feePercentage, timeFactor);
+    
     // 5. Save PDF to disk (or upload to S3)
-    const fileName = `invoice_${savedInvoice.id}_${client.id}.pdf`;
+    const fileName = `invoice_${newInvoice.id}_${client.id}.pdf`;
     const uploadDir = path.join(__dirname, '..', '..', 'uploads', 'invoices');
     
     if (!fs.existsSync(uploadDir)){
-        fs.mkdirSync(uploadDir, { recursive: true });
+      fs.mkdirSync(uploadDir, { recursive: true });
     }
     
     fs.writeFileSync(path.join(uploadDir, fileName), pdfBuffer);
-    
+
+    const newPdf = this.invoicePdfRepo.create({
+      pdf: pdfBuffer
+    })
+
+    const savedPdf = await this.invoicePdfRepo.save(newPdf);    
     this.logger.log(`Invoice generated for ${client.email}: ${amount} ${client.profile.preferredCurrency}`);
     
     return { invoice: savedInvoice, pdf: pdfBuffer };
@@ -138,7 +145,6 @@ export class InvoiceService {
       if (fs.existsSync(logoPath)) {
         doc.image(logoPath, 50, 40, { width: 120 }); // x, y, width
       }
-
 
       // --- DIVIDER ---
       doc.strokeColor('#e5e7eb').lineWidth(1).moveTo(50, 130).lineTo(550, 130).stroke();
