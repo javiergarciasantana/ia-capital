@@ -18,6 +18,8 @@ export class ReportsService {
     const report = this.reportRepo.create({
       clienteId: reportDto.clienteId,
       fechaInforme: reportDto.fechaInforme,
+      resumenGlobal: reportDto.resumenGlobal,
+      resumenTailored: reportDto.resumenTailored,
       resumenEjecutivo: reportDto.resumenEjecutivo,
       snapshot: reportDto.snapshot,
       distribution: Array.isArray(reportDto.distribucion)

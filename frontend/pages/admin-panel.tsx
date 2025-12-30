@@ -3,6 +3,8 @@ import { useRouter } from 'next/router';
 import { withAuth } from '../utils/withAuth';
 import { useAuth } from '../context/AuthContext';
 import Header from '../components/Header';
+import RichTextEditor from '@/components/RichTextEditor';
+import DOMPurify from 'dompurify';
 import {
   PieChart,
   Pie,
@@ -125,6 +127,10 @@ function AdminPanel() {
   const [uploadingClientId, setUploadingClientId] = useState<number | null>(null);
   const [publishing, setPublishing] = useState(false);
 
+  const [globalSummary, setGlobalSummary] = useState<string | null>(null);
+  const [tailoredSummary, setTailoredSummary] = useState<string | null>(null);
+
+
   // Auth Headers Memo
   const authHeaders = useMemo(() => {
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -191,6 +197,8 @@ function AdminPanel() {
           clientId: reportPreview.clienteId,
           report: reportPreview,
           monthYear: reportPreview.fechaInforme,
+          resumenGlobal: globalSummary,
+          resumenTailored: tailoredSummary,
         }),
       });
       const result = await res.json();
@@ -258,7 +266,31 @@ function AdminPanel() {
           </h2>
           <p style={{ color: '#666', marginTop: '8px' }}>Seleccione un cliente para subir y generar un nuevo informe mensual.</p>
         </div>
-
+        {/* RichTextEditor for executive summary */}
+        <div style={{
+          background: '#fff',
+          border: '1px solid #eee',
+          borderRadius: '10px',
+          padding: '24px',
+          marginBottom: '36px',
+          boxShadow: '0 2px 6px rgba(26,35,64,0.04)',
+          maxWidth: '1900px'
+        }}>
+          <div style={{
+            fontSize: '15px',
+            fontWeight: 700,
+            color: '#1a2340',
+            marginBottom: '8px',
+            textTransform: 'uppercase',
+            letterSpacing: '1px'
+          }}>
+            Resumen Ejecutivo Global (Editor)
+          </div>
+          <RichTextEditor
+            value={''}
+            onChange={html => setGlobalSummary(html)}
+          />
+        </div>
         {/* Client Grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '24px' }}>
           {clients.filter(client => client.isActive).map((client) => (
@@ -347,7 +379,6 @@ function AdminPanel() {
                 <div style={{ fontSize: '18px', fontWeight: 700, color: '#1a2340' }}>{getClientNameById(reportPreview.clienteId)}</div>
               </div>
             </div>
-
             {/* Modal Scrollable Content */}
             <div style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
               
@@ -370,6 +401,44 @@ function AdminPanel() {
                 />
               </div>
 
+              {/* Modal Global Summary */}
+              <SectionTitle title="Resumen Ejecutivo Global" />
+              <div
+                style={{
+                  background: '#f9fafb',
+                  border: '1px solid #eee',
+                  borderRadius: '6px',
+                  padding: '5px',
+                  marginBottom: '16px',
+                  color: '#888',           // dim text
+                  fontSize: '15px',
+                  height: '100px',      // adjust as needed
+                  maxHeight: '100px',
+                  overflowY: 'scroll',
+                  opacity: 0.7,            // further dimming
+                  pointerEvents: 'none',   // not interactive
+                  userSelect: 'text',      // allow text selection if desired
+                }}
+                dangerouslySetInnerHTML={{
+                  __html: DOMPurify.sanitize(globalSummary || '<i>Sin resumen disponible</i>'),
+                }}
+              />
+              {/* RichTextEditor for tailored summary */}
+              <SectionTitle title="Resumen Ejecutivo Individual" />
+              <div style={{
+                background: '#fff',
+                border: '1px solid #eee',
+                borderRadius: '10px',
+                padding: '24px',
+                marginBottom: '36px',
+                boxShadow: '0 2px 6px rgba(26,35,64,0.04)',
+                maxWidth: '1900px'
+              }}>
+                <RichTextEditor
+                  value={''}
+                  onChange={html => setTailoredSummary(html)}
+                />
+              </div>
               {/* 2. Snapshot & Desglose Bancos */}
               <SectionTitle title="Posición Financiera" />
               <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap', marginBottom: '24px' }}>

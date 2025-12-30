@@ -17,3 +17,10 @@ body {
 html, body {
   font-family: 'Inter', system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, 'Helvetica Neue', Arial, sans-serif;
 }
+
+.ProseMirror {
+  min-height: 200px;   /* Adjust height as needed */
+  padding: 5px;
+  box-sizing: border-box;
+  font-size: 1rem;     /* Optional: adjust font size */
+}

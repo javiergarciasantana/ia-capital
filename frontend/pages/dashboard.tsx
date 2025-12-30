@@ -521,21 +521,33 @@ function Dashboard() {
   const [addClientError, setAddClientError] = useState<string | null>(null);
   const [addClientSuccess, setAddClientSuccess] = useState(false);
   const [addClientForm, setAddClientForm] = useState({
-    name: '',
-    surname: '',
     email: '',
     password: '',
     role: 'client',
     isActive: true,
+    profile: {
+      firstName: '',
+      lastName: '',
+    },
   });
 
   // Handle Add Client Form Change
   const handleAddClientChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
+    if (name === 'firstName' || name === 'lastName') {
+    setAddClientForm(prev => ({
+      ...prev,
+      profile: {
+        ...prev.profile,
+        [name]: value
+      }
+    }));
+  } else {
     setAddClientForm(prev => ({
       ...prev,
       [name]: type === 'checkbox' && e.target instanceof HTMLInputElement ? e.target.checked : value,
     }));
+  }
   };
 
   // --- MEMOIZED HEADERS ---
@@ -681,6 +693,7 @@ function Dashboard() {
       setAddClientSuccess(false);
 
       try {
+      console.log('User Creation json', JSON.stringify(addClientForm));
       const res = await fetch(`${API_BASE}/users`, {
         method: 'POST',
         headers: authHeaders as any,
@@ -693,12 +706,14 @@ function Dashboard() {
         setAddClientSuccess(true);
         setShowAddClientModal(false);
         setAddClientForm({
-        name: '',
-        surname: '',
-        email: '',
-        password: '',
-        role: 'client',
-        isActive: true,
+          email: '',
+          password: '',
+          role: 'client',
+          isActive: true,
+          profile: {
+            firstName: '',
+            lastName: '',
+          },
         });
         // Refetch clients
         const clientsRes = await fetch(`${API_BASE}/users?role=client`, { headers: authHeaders as any });
@@ -711,17 +726,20 @@ function Dashboard() {
       setAddClientLoading(false);
       }
     }
+
     function handleAddClient(): void {
       setShowAddClientModal(true);
       setAddClientError(null);
       setAddClientSuccess(false);
       setAddClientForm({
-      name: '',
-      surname: '',
-      email: '',
-      password: '',
-      role: 'client',
-      isActive: true,
+        email: '',
+        password: '',
+        role: 'client',
+        isActive: true,
+        profile: {
+          firstName: '',
+          lastName: '',
+        },
       });
     }
     return (
@@ -839,8 +857,8 @@ function Dashboard() {
                       }}>
                         <h2 style={{ margin: 0, color: '#1a2340', fontSize: 22, fontWeight: 800, textAlign: 'center', letterSpacing: 1 }}>Registrar Nuevo Cliente</h2>
                         <div style={{ display: 'flex', gap: 12 }}>
-                          <input name="name" value={addClientForm.name} onChange={handleAddClientChange} required placeholder="Nombre" style={{ flex: 1, padding: 12, borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 16 }} />
-                          <input name="surname" value={addClientForm.surname} onChange={handleAddClientChange} placeholder="Apellidos" style={{ flex: 1, padding: 12, borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 16 }} />
+                          <input name="firstName" value={addClientForm.profile.firstName} onChange={handleAddClientChange} required placeholder="Nombre" style={{ flex: 1, padding: 12, borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 16 }} />
+                          <input name="lastName" value={addClientForm.profile.lastName} onChange={handleAddClientChange} placeholder="Apellidos" style={{ flex: 1, padding: 12, borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 16 }} />
                         </div>
                         <input name="email" value={addClientForm.email} onChange={handleAddClientChange} required type="email" placeholder="Email" style={{ padding: 12, borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 16 }} />
                         <input name="password" value={addClientForm.password} onChange={handleAddClientChange} required type="password" placeholder="Contraseña" style={{ padding: 12, borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 16 }} />

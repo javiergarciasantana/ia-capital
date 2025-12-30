@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, ManyToOne, JoinColumn } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany, ManyToOne, JoinColumn} from 'typeorm';
 import { Distribution } from './distribution.entity';
 import { ChildDistribution } from './child-distribution.entity';
 import { User } from '../users/user.entity';
@@ -13,6 +13,12 @@ export class Report {
 
   @Column()
   fechaInforme: Date;
+
+  @Column('text', { nullable: true})
+  resumenGlobal: string;
+
+  @Column('text', { nullable: true})
+  resumenTailored: string;
 
   @Column({ type: 'jsonb' })
   resumenEjecutivo: any;
