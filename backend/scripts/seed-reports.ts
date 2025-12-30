@@ -7,7 +7,7 @@ import { UsersService } from '../src/users/users.service';
 
 const XLSX_DIR = '/app/reports/'; // Adjust as needed
 const API_BASE = 'http://localhost:5000/api/xlsx'; // Adjust port/path as needed
-const ADMIN_JWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjUsImVtYWlsIjoiYWRtaW5AaWEuY2FwaXRhbCIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc2NzAwODU5NywiZXhwIjoxNzY3MDE1Nzk3fQ.P8y48Za1rnOwRqcEBpfgwFJsHzoNMDm4yz5zekK7y-M'
+const ADMIN_JWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjUsImVtYWlsIjoiYWRtaW5AaWEuY2FwaXRhbCIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc2NzA5NjI2NCwiZXhwIjoxNzY3MTAzNDY0fQ.f2_CahPEwoIFkTT01BtqWL0Ul67VTTt8PCeo2S--BLA'
 async function main() {
   const app = await NestFactory.createApplicationContext(AppModule);
   const usersService = app.get(UsersService);
@@ -58,6 +58,26 @@ async function main() {
     );
     const report = (uploadRes.data as { data: any }).data;
 
+    const resumenGlobal = `
+      <h2>Resumen Global del Mes</h2>
+      <p>Estimados usuarios,</p>
+      <p>Adjuntamos el informe global correspondiente al mes actual. Si tienen alguna duda, no duden en contactarnos.</p>
+      <ul>
+      <li>Fecha: ${new Date().toLocaleDateString()}</li>
+      </ul>
+      <p>Saludos,<br>Equipo IA Capital</p>
+    `;
+    const resumenTailored = `
+      <h2>Resumen del mes</h2>
+      <p>Estimado/a ${profile.firstName},</p>
+      <p>Adjuntamos el informe correspondiente al mes actual. Si tienes alguna duda, no dudes en contactarnos.</p>
+      <ul>
+      <li>Cliente: ${profile.firstName} ${profile.lastName || ''}</li>
+      <li>Email: ${client.email}</li>
+      <li>Fecha: ${new Date().toLocaleDateString()}</li>
+      </ul>
+      <p>Saludos,<br>Equipo IA Capital</p>
+    `;
     // 2. Publish
     const monthYear = new Date().toISOString().slice(0, 7); // Or extract from filename
     await axios.post(
@@ -66,6 +86,8 @@ async function main() {
         clientId: client.id,
         report,
         monthYear,
+        resumenGlobal,
+        resumenTailored
       },
       {
         headers: { Authorization: `Bearer ${ADMIN_JWT}` },

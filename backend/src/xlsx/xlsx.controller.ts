@@ -7,9 +7,6 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { XlsxService } from './xlsx.service';
 import { User } from '../auth/user.decorator';
 
-import { Delete } from '@nestjs/common';
-
-
 @Controller('xlsx')
 export class XlsxController {
   constructor(
@@ -52,7 +49,7 @@ export class XlsxController {
       distribucion: assetAllocation,
       distribucion_hijos: assetAllocationChild,
     };
-    console.log("Final report", finalReport);
+    //console.log("Final report", finalReport);
     return { message: 'Informe procesado correctamente', data: finalReport };
   }
 
@@ -76,7 +73,7 @@ export class XlsxController {
         throw new BadRequestException('Missing required fields: clientId, report, monthYear');
       }
       // Save published data to DB
-      console.log('saveReport received:', report);
+      //console.log('saveReport received:', report);
       const savedReport = await this.reportsService.saveReport({
         ...report,
         clienteId: clientId,

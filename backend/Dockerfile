@@ -15,6 +15,7 @@ RUN npm ci
 # Copy the rest of the application code and environment variables
 COPY . .
 COPY .env .env
+COPY ./src/common/logo.png ./dist/src/common/logo.png
 
 # Build the project and ensure the main entrypoint exists (fail early if not)
 RUN npm run build && test -f dist/src/main.js

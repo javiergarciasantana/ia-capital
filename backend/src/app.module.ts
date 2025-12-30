@@ -8,6 +8,7 @@ import { UsersModule } from './users/users.module';
 import { XlsxModule } from './xlsx/xlsx.module'
 import { ReportsModule } from './reports/reports.module';
 import { HistoryModule } from './history/history.module'
+import { InvoiceModule } from './invoices/invoice.module'
 import { PrivateAiModule } from './private-ai/private-ai.module';
 import { AiChatModule } from './ai-chat/ai-chat.module';
 
@@ -66,6 +67,7 @@ import { AiChatModule } from './ai-chat/ai-chat.module';
     XlsxModule,
     ReportsModule,
     HistoryModule,
+    InvoiceModule,
     PrivateAiModule,
     AiChatModule,
   ],

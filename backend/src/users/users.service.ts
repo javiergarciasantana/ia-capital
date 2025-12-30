@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Not, Repository } from 'typeorm';
 import { User, UserRole } from './user.entity';
 import * as bcrypt from 'bcrypt';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -44,7 +44,9 @@ export class UsersService {
       profile: dto.profile
         ? {
             ...dto.profile,
+            feePercentage: dto.profile.feePercentage,
             feeInterval: dto.profile.feeInterval as 'quarterly' | 'biannual' | undefined,
+            preferredCurrency: dto.profile.preferredCurrency,
           }
         : null,
     });
@@ -94,7 +96,7 @@ export class UsersService {
   }
 
   async removeAll(): Promise<void> {
-    const users = await this.userRepository.find();
+    const users = await this.userRepository.find({ where: { role: Not('admin') } });
     if (users.length > 0) {
       await this.userRepository.remove(users);
     }

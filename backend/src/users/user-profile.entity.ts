@@ -25,8 +25,9 @@ export class UserProfile {
     @Column({ type: 'date', nullable: true }) birthDate?: string; // YYYY-MM-DD
 
     // Preferencias
+    @Column({ type: 'float', nullable: true }) feePercentage?: number;
     @Column({ type: 'varchar', nullable: true })
-    feeInterval: 'quarterly' | 'biannual';
+    feeInterval?: 'quarterly' | 'biannual';
     @Column({ nullable: true }) preferredLanguage?: string; // 'es' | 'en'...
     @Column({ nullable: true }) preferredCurrency?: string; // 'EUR', 'USD'...
 

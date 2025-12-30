@@ -383,6 +383,54 @@ const ClientCirclesPanel = ({
                     <path d="M7 8h6" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
                   </svg>
                 </div>
+
+                {/* Generate Invoice Button (Right) */}
+                <button
+                  style={{
+                    position: 'absolute',
+                    top: -18,
+                    right: -18,
+                    width: 38,
+                    height: 38,
+                    borderRadius: '50%',
+                    background: '#0ea5e9',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    boxShadow: '0 2px 8px rgba(26,35,64,0.10)',
+                    cursor: changingActiveId === client.id ? 'not-allowed' : 'pointer',
+                    border: '2px solid #fff',
+                    zIndex: 10,
+                    transition: 'background 0.2s',
+                  }}
+                  title="Generar factura"
+                  disabled={changingActiveId === client.id}
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    if (changingActiveId === client.id) return;
+                    try {
+                      const res = await fetch(`/api/invoices/test/${client.id}`, {
+                        method: 'POST',
+                        headers: authHeaders as any,
+                      });
+                      if (res.ok) {
+                        // Open PDF in new tab
+                        const blob = await res.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        window.open(url, '_blank');
+                      } else {
+                        alert('No se pudo generar la factura.');
+                      }
+                    } catch (err) {
+                      alert('Error generando la factura.');
+                    }
+                  }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+                    <rect x="4" y="4" width="12" height="12" rx="2" stroke="#fff" strokeWidth="2" />
+                    <path d="M7 8h6M7 11h6" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                </button>
               </>
             )}
           </div>
@@ -411,6 +459,7 @@ const ClientCirclesPanel = ({
             +
           </div>
         )}
+        
         <style>{`
           @keyframes fadeInCircle {
             0% { opacity: 0; transform: scale(0.85) translateY(30px);}
@@ -528,13 +577,16 @@ function Dashboard() {
     profile: {
       firstName: '',
       lastName: '',
+      feePercentage: 0.3,
+      feeInterval: '',
+      preferredCurrency: '',
     },
   });
 
   // Handle Add Client Form Change
   const handleAddClientChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
-    if (name === 'firstName' || name === 'lastName') {
+    if (name === 'firstName' || name === 'lastName' || name == 'feePercentage' || name == 'feeInterval' || name == 'preferredCurrency') {
     setAddClientForm(prev => ({
       ...prev,
       profile: {
@@ -713,6 +765,9 @@ function Dashboard() {
           profile: {
             firstName: '',
             lastName: '',
+            feePercentage: 0.3,
+            feeInterval: '',
+            preferredCurrency: '',
           },
         });
         // Refetch clients
@@ -739,6 +794,9 @@ function Dashboard() {
         profile: {
           firstName: '',
           lastName: '',
+          feePercentage: 0.3,
+          feeInterval: '',
+          preferredCurrency: '',
         },
       });
     }
@@ -862,6 +920,50 @@ function Dashboard() {
                         </div>
                         <input name="email" value={addClientForm.email} onChange={handleAddClientChange} required type="email" placeholder="Email" style={{ padding: 12, borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 16 }} />
                         <input name="password" value={addClientForm.password} onChange={handleAddClientChange} required type="password" placeholder="Contraseña" style={{ padding: 12, borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 16 }} />
+                        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
+                          <select 
+                            name="preferredCurrency" 
+                            value={addClientForm.profile.preferredCurrency} 
+                            onChange={handleAddClientChange} 
+                            required 
+                            style={{ flex: 1, padding: 12, borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 16 }} 
+                          >
+                            <option value="">Selecciona divisa</option>
+                            <option value="USD">USD</option>
+                            <option value="EUR">EUR</option>
+                          </select>
+                          <select 
+                            name="feeInterval" 
+                            value={addClientForm.profile.feeInterval} 
+                            onChange={handleAddClientChange} 
+                            required 
+                            style={{ flex: 1, padding: 12, borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 16 }} 
+                          >
+                            <option value="">Selecciona intervalo factura</option>
+                            <option value="quarterly">Trimestral</option>
+                            <option value="biannual">Semestral</option>
+                          </select>
+                      
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
+                          <label style={{ fontWeight: 600, color: '#020202ff', minWidth: 90 }}>
+                            Comisión
+                            <input
+                              type="range"
+                              name="feePercentage"
+                              min={0.1}
+                              max={1}
+                              step={0.01}
+                              value={addClientForm.profile.feePercentage ?? 0.5}
+                              onChange={handleAddClientChange}
+                              style={{ width: 120, marginLeft: 8, verticalAlign: 'middle' }}
+                            />
+                            <span style={{ marginLeft: 8, fontWeight: 700, color: '#1a2340' }}>
+                              {(Number(addClientForm.profile.feePercentage ?? 0.5)).toFixed(2)}%
+                            </span>
+                          </label>
+
+                        </div>
                         <input type="hidden" name="isActive" value="true" />
                         {/* No "Activo" checkbox needed, as el cliente siempre estará activo */}
                         {addClientError && <div style={{ color: '#e74c3c', fontWeight: 600, textAlign: 'center' }}>{addClientError}</div>}

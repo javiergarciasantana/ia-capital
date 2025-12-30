@@ -7,6 +7,7 @@ import {
     IsDateString,
     ValidateNested,
     IsIn,
+    IsNumber,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { UserRole } from '../user.entity';
@@ -23,7 +24,9 @@ export class CreateUserProfileDto {
     @IsOptional() @IsDateString() birthDate?: string;
 
     @IsOptional() @IsString() preferredLanguage?: string;
+    @IsOptional() @IsNumber() feePercentage?: number;
     @IsOptional() @IsString() feeInterval?: string;
+    @IsOptional() @IsString() preferredCurrency?: string;
 
     @IsOptional() @IsString() notes?: string;
 }

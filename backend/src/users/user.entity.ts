@@ -9,7 +9,10 @@ import {
   JoinColumn,
 } from 'typeorm';
 import { UserProfile } from './user-profile.entity';
-import { Report } from '../reports/report.entity'; // <--- Importa Report
+import { Report } from '../reports/report.entity';
+import { History } from '../history/history.entity';
+import { Invoice } from '../invoices/invoice.entity'
+
 
 export type UserRole = 'client' | 'admin' | 'superadmin';
 
@@ -45,9 +48,16 @@ export class User {
     eager: true,
     nullable: true,
   })
+
   @JoinColumn() // la FK se guarda en la tabla users
   profile?: UserProfile | null;
 
   @OneToMany(() => Report, (report) => report.clienteId)
   reports: Report[];
+
+  @OneToMany(() => History, (history) => history.clienteId)
+  history: History[];
+
+  @OneToMany(() => Invoice, (invoice) => invoice.clienteId)
+  invoices: Invoice[];
 }
