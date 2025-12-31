@@ -264,7 +264,7 @@ function AdminPanel() {
           <h2 style={{ fontSize: '28px', fontWeight: 300, color: '#1a2340', margin: 0 }}>
         Gestión de <b style={{ fontWeight: 700 }}>Clientes</b>
           </h2>
-          <p style={{ color: '#666', marginTop: '8px' }}>Seleccione un cliente para subir y generar un nuevo informe mensual.</p>
+            <p style={{ color: '#666', marginTop: '8px', textAlign: 'center' }}>Seleccione un cliente para subir y generar un nuevo informe mensual.</p>
         </div>
         {/* RichTextEditor for executive summary */}
         <div style={{
