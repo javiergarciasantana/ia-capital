@@ -11,7 +11,6 @@ RUN npm ci
 # Use a separate stage for building with all dependencies and build-time env vars
 FROM node:20-slim AS build
 WORKDIR /app
-ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # Set build-time arguments for API URLs (important for correct API endpoints)
