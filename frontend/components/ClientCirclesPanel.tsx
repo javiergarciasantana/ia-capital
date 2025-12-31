@@ -512,3 +512,54 @@ const ClientCirclesPanel: React.FC<{
 };
 
 export default ClientCirclesPanel;
+{/* <button
+  style={{
+    position: 'absolute',
+    bottom: -18,
+    right: -18,
+    width: 38,
+    height: 38,
+    borderRadius: '50%',
+    background: '#0ea5e9',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: '0 2px 8px rgba(26,35,64,0.10)',
+    cursor: changingActiveId === client.id ? 'not-allowed' : 'pointer',
+    border: '2px solid #fff',
+    zIndex: 10,
+    transition: 'background 0.2s',
+  }}
+  title="Descargar todas las facturas (ZIP)"
+  disabled={changingActiveId === client.id}
+  onClick={async (e) => {
+    e.stopPropagation();
+    if (changingActiveId === client.id) return;
+    try {
+      const res = await fetch(`/api/invoices/all-pdfs`, {
+        method: 'GET',
+        headers: authHeaders as any,
+      });
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'all_invoices.zip';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        window.URL.revokeObjectURL(url);
+      } else {
+        alert('No se pudo descargar el ZIP de facturas.');
+      }
+    } catch (err) {
+      alert('Error descargando el ZIP de facturas.');
+    }
+  }}
+>
+  <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+    <rect x="4" y="4" width="12" height="12" rx="2" stroke="#fff" strokeWidth="2" />
+    <path d="M7 8h6M7 11h6" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+</button> */}

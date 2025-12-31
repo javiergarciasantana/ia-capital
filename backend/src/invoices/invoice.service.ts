@@ -206,6 +206,11 @@ export class InvoiceService {
     });
   }
 
+
+  async getAllInvoicePdfs(): Promise<InvoicePdf[]> {
+    return this.invoicePdfRepo.find();
+  }
+
     async deleteAllInvoices() {
     // Use delete({}) instead of clear() to avoid TRUNCATE and FK constraint errors
     // const histories = await this.HistoryRepo.find();

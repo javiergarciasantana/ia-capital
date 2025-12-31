@@ -596,7 +596,6 @@ function Dashboard() {
                             <option value="quarterly">Trimestral</option>
                             <option value="biannual">Semestral</option>
                           </select>
-                      
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%' }}>
                           <label style={{ fontWeight: 600, color: '#020202ff', minWidth: 90 }}>
@@ -615,7 +614,6 @@ function Dashboard() {
                               {((Number(addClientForm.profile.feePercentage ?? 0.003) * 100).toFixed(2))}%
                             </span>
                           </label>
-
                         </div>
                         <input type="hidden" name="isActive" value="true" />
                         {/* No "Activo" checkbox needed, as el cliente siempre estará activo */}
