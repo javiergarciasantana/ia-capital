@@ -98,7 +98,7 @@ export class InvoiceService {
       fechaFactura: new Date(),
       descripcion: `Management Fee - ${(interval ?? 'undefined').charAt(0).toUpperCase() + (interval ?? 'undefined').slice(1)} (${new Date().getFullYear()})`,
       importe: parseFloat(amount.toFixed(2)),
-      client: client,
+      client
       
     });
     
@@ -117,7 +117,9 @@ export class InvoiceService {
     fs.writeFileSync(path.join(uploadDir, fileName), pdfBuffer);
 
     const newPdf = this.invoicePdfRepo.create({
-      pdf: pdfBuffer
+      clienteId: client.id,
+      pdf: pdfBuffer,
+      client
     })
 
     const savedPdf = await this.invoicePdfRepo.save(newPdf);    
@@ -211,6 +213,14 @@ export class InvoiceService {
     return this.invoicePdfRepo.find();
   }
 
+  async getUserInvoicePdfs(id: Number): Promise<InvoicePdf[]> {
+    return this.invoicePdfRepo.find( {
+      where: {
+        clienteId: Number(id),
+      },
+    })
+  }
+
     async deleteAllInvoices() {
     // Use delete({}) instead of clear() to avoid TRUNCATE and FK constraint errors
     // const histories = await this.HistoryRepo.find();
@@ -221,6 +231,19 @@ export class InvoiceService {
     const invoices = await this.invoiceRepo.find();
     for (const invoice of invoices) {
       await this.invoiceRepo.delete(invoice.id);
+    }
+  }
+
+    async deleteAllPdfs() {
+    // Use delete({}) instead of clear() to avoid TRUNCATE and FK constraint errors
+    // const histories = await this.HistoryRepo.find();
+    // for (const history of histories) {
+    //   await this.HistoryRepo.delete(history.id);
+    // }
+
+    const invoices = await this.invoicePdfRepo.find();
+    for (const invoice of invoices) {
+      await this.invoicePdfRepo.delete(invoice.id);
     }
   }
 }

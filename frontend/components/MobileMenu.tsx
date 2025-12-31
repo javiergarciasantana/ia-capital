@@ -65,6 +65,9 @@ export default function MobileMenu() {
           {(auth?.role === 'admin' || auth?.role === 'superadmin') && (
             <li onClick={() => navigateTo('/admin-panel')}>Subir Informes</li>
           )}
+          {(auth?.role === 'admin' || auth?.role === 'superadmin') && (
+            <li onClick={() => navigateTo('/invoices')}>Subir Informes</li>
+          )}
           <li onClick={() => navigateTo('/chat')}>Chat</li>
           {/* <li onClick={() => navigateTo('/settings')}>Configuración</li> */}
           <li onClick={logout}>Cerrar sesión</li>
