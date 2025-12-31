@@ -32,6 +32,7 @@ RUN npm ci
 COPY . .
 
 # Set correct permissions for the node user (security best practice)
+RUN chown -R node:node .next
 RUN chown -R node:node /app
 
 # Build the Next.js app (creates the .next directory)
