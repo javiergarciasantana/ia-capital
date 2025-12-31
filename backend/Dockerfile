@@ -45,4 +45,4 @@ RUN ls -l node_modules/xlsx
 EXPOSE 5000
 
 # Start the application
-CMD ["node", "dist/main.js"]
+CMD ["node", "dist/src/main.js"]
