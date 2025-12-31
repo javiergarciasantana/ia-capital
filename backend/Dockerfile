@@ -14,8 +14,7 @@ RUN npm ci
 
 # Copy the rest of the application code and environment variables
 COPY . .
-COPY .env .env
-COPY ./src/common/logo.png ./dist/src/common/logo.png
+# COPY .env .env
 
 # Build the project and ensure the main entrypoint exists (fail early if not)
 RUN npm run build && test -f dist/src/main.js
@@ -24,16 +23,17 @@ RUN npm run build && test -f dist/src/main.js
 # RUN npm prune --omit=dev && test -f dist/main.js
 
 # ---------- Runtime stage ----------
-# Use a fresh slim Node.js image for running the app (smaller, safer)
-FROM node:20-slim AS runner
-WORKDIR /app/backend
-ENV NODE_ENV=production
-ENV PORT=5000
-
-# Copy only production dependencies and built code from builder stage
-COPY --from=builder /app/backend/node_modules ./node_modules
-COPY --from=builder /app/backend/dist ./dist
-COPY --from=builder /app/backend/package*.json ./
+  # Use a fresh slim Node.js image for running the app (smaller, safer)
+  FROM node:20-slim AS runner
+  WORKDIR /app/backend
+  ENV NODE_ENV=production
+  ENV PORT=5000
+  
+  # Copy only production dependencies and built code from builder stage
+  COPY --from=builder /app/backend/node_modules ./node_modules
+  COPY --from=builder /app/backend/dist ./dist
+  COPY --from=builder /app/backend/package*.json ./
+  COPY ./src/common/logo.png ./dist/src/common/logo.png
 
 # Create uploads directory for file storage (important for file uploads)
 RUN mkdir -p /app/backend/uploads
