@@ -5,7 +5,7 @@
 FROM node:20-slim AS deps
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm ci 
 
 # --- Build (con devDeps y variables de build) ---
 # Use a separate stage for building with all dependencies and build-time env vars
