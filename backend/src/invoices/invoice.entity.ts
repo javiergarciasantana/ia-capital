@@ -20,9 +20,6 @@ export class Invoice {
   @Column('float')
   importe: number;
 
-  @ManyToOne(() => User, (user) => user.invoices)
-  @JoinColumn({ name: 'clienteId' })
-  client: User;
 
   @OneToOne(() => Report, (report) => report.invoice, { onDelete: 'CASCADE' })
   @JoinColumn()

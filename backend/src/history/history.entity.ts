@@ -22,8 +22,7 @@ export class History {
   @Column('decimal', { precision: 10, scale: 2 })
   rendimientoYTD: number;
 
-  @ManyToOne(() => User, (user) => user.reports) 
+  @ManyToOne(() => User, (user) => user.history, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'clienteId' })
   client: User;
-
 }

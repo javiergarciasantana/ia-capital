@@ -3,6 +3,7 @@ import {
     PrimaryGeneratedColumn,
     Column,
     OneToOne,
+    JoinColumn
 } from 'typeorm';
 import { User } from './user.entity';
 
@@ -53,5 +54,6 @@ export class UserProfile {
 
     // Relación 1–1 con User
     @OneToOne(() => User, (user) => user.profile, { onDelete: 'CASCADE' })
+    @JoinColumn()
     user: User;
 }

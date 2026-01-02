@@ -45,16 +45,14 @@ export class User {
     cascade: true,
     eager: true,
     nullable: true,
+    onDelete: 'CASCADE'
   })
-  @JoinColumn() // la FK se guarda en la tabla users
   profile?: UserProfile | null;
 
-  @OneToMany(() => Report, (report) => report.client)
+  @OneToMany(() => Report, (report) => report.client, { cascade: true, onDelete: 'CASCADE' })
   reports: Report[];
 
-  @OneToMany(() => History, (history) => history.clienteId)
+  @OneToMany(() => History, (history) => history.clienteId, { cascade: true, onDelete: 'CASCADE' })
   history: History[];
 
-  @OneToMany(() => Invoice, (invoice) => invoice.client)
-  invoices: Invoice[];
 }

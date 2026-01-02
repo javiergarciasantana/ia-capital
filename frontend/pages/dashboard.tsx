@@ -4,7 +4,7 @@ import { useRouter } from 'next/router';
 import { withAuth } from '../utils/withAuth';
 import { useAuth } from '../context/AuthContext';
 import Header from '../components/Header';
-import ProfitCard from '../components/ProfitCard';
+import DeleteModal from '../components/DeleteModal'; // Adjust path if needed
 import ClientCirclesPanel from '../components/ClientCirclesPanel'
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
@@ -195,14 +195,16 @@ function Dashboard() {
   // --- STATE ---
   const [clients, setClients] = useState<any[]>([]);
   const [lastDoc, setLastDoc] = useState<any>(null);
-  const [dateRange, setDateRange] = useState(() => {
+  const [dateRange, setDateRange] = useState<{ from: string; to: string }>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('dashboard_dateRange');
+      if (stored) return JSON.parse(stored);
+    }
     const today = new Date();
     const to = today.toISOString().split('T')[0];
     const lastMonth = new Date(today);
     lastMonth.setMonth(today.getMonth() - 1);
-    // Handle edge case for months with fewer days
     if (lastMonth.getMonth() === today.getMonth()) {
-      // If setMonth overflowed (e.g. March 31 - 1 month = March 3), set to last day of previous month
       lastMonth.setDate(0);
     }
     const from = lastMonth.toISOString().split('T')[0];
@@ -212,6 +214,7 @@ function Dashboard() {
   const [history, setHistory] = useState<HistoryData[]>([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [deleteModal, setDeleteModal] = useState<{ open: boolean; report: ReportData | null }>({ open: false, report: null });
   const [reportPreview, setReportPreview] = useState<ReportData | null>(null);
   const [historyPreview, setHistoryPreview] = useState<HistoryData[]>([]);
   const [showAddClientModal, setShowAddClientModal] = useState(false);
@@ -387,6 +390,10 @@ function Dashboard() {
     fetchHistory();
   }, [auth, dateRange])
 
+  useEffect(() => {
+  localStorage.setItem('dashboard_dateRange', JSON.stringify(dateRange));
+  }, [dateRange]);
+
   if (!auth) return <div className="loading-container">Cargando...</div>;
 
   // --- ADMIN VIEW ---
@@ -453,6 +460,23 @@ function Dashboard() {
         },
       });
     }
+
+    async function handleDeleteReport(reportId: number, authHeaders: Record<string, string>, setReports: React.Dispatch<React.SetStateAction<ReportData[]>>) {
+      try {
+        const res = await fetch(`/api/reports/${reportId}`, {
+          method: 'DELETE',
+          headers: authHeaders as any,
+        });
+        if (res.ok) {
+          setReports(prev => prev.filter(r => r.id !== reportId));
+        } else {
+          const data = await res.json();
+          alert(data.message || 'Error al eliminar el informe.');
+        }
+      } catch (e) {
+        alert('Error de red al eliminar el informe.');
+      }
+}
     return (
       <div className="dashboard-container" style={{ backgroundColor: '#f8fafc', minHeight: '100vh', paddingBottom: 60 }}>
         <Header variant="dashboard" title="Panel Principal" />
@@ -646,7 +670,9 @@ function Dashboard() {
                         <th style={{ padding: '16px 24px', textAlign: 'right', color: '#64748b', fontWeight: 600 }}>Patrimonio Neto</th>
                         <th style={{ padding: '16px 24px', textAlign: 'right', color: '#64748b', fontWeight: 600 }}>Ratio Deuda</th>
                         <th style={{ padding: '16px 24px', textAlign: 'right', color: '#64748b', fontWeight: 600 }}>Rentabilidad YTD</th>
-                        <th style={{ padding: '16px 24px', textAlign: 'center', color: '#64748b', fontWeight: 600 }}>Acciones</th>
+                        <th style={{ padding: '16px 24px', textAlign: 'center', color: '#64748b', fontWeight: 600 }}>Detalles</th>
+                        <th style={{ padding: '16px 24px', textAlign: 'center', color: 'rgba(255, 0, 0, 1)', fontWeight: 600 }}>Eliminar</th>
+
                       </tr>
                     </thead>
                     <tbody>
@@ -690,12 +716,55 @@ function Dashboard() {
                                 const clientHistory = history.filter(
                                   h => h.clienteId === report.clienteId
                                 );
-                                console.log("History", history)
+                                //console.log("History", history)
                                 setHistoryPreview(clientHistory);
                                 setModalOpen(true); 
                               }}
                             >
                               Ver
+                            </button>
+                          </td>
+                          <td style={{ padding: '16px 24px', alignItems: 'center' }}>
+                            <button
+                              style={{
+                              background: 'none',
+                              border: 'none',
+                              padding: '6px 12px',
+                              borderRadius: 6,
+                              cursor: 'pointer',
+                              fontSize: 16,
+                              fontWeight: 600,
+                              color: '#ef4444',
+                              marginLeft: 8,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                              }}
+                              title="Eliminar"
+                              onClick={() => setDeleteModal({ open: true, report })}
+                            >
+                              <span
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  background: '#ef4444',
+                                  borderRadius: '8px',
+                                  width: 32,
+                                  height: 32,
+                                  transition: 'background 0.2s',
+                                }}
+                              >
+                                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                                    <rect x="0" y="0" width="24" height="24" rx="6" fill="#ef4444" />
+                                    <path
+                                      d="M7 7L17 17M17 7L7 17"
+                                      stroke="#fff"
+                                      strokeWidth="2"
+                                      strokeLinecap="round"
+                                    />
+                                  </svg>
+                              </span>
                             </button>
                           </td>
                         </tr>
@@ -912,6 +981,18 @@ function Dashboard() {
               )}
             </>
           )}
+        {/* Delete Modal*/}
+        <DeleteModal
+          open={deleteModal.open}
+          onClose={() => setDeleteModal({ open: false, report: null })}
+          onDelete={async () => {
+            if (!deleteModal.report) return;
+            await handleDeleteReport(deleteModal.report.id, authHeaders, setReports);
+            setDeleteModal({ open: false, report: null });
+          }}
+          thingToDelete="el informe y todos sus datos relacionados?"
+          // Optionally, you can add more props for customization
+        />
         </div>
       </div>
     );

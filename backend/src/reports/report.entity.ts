@@ -27,7 +27,7 @@ export class Report {
   @Column({ type: 'jsonb' })
   snapshot: any;
 
-  @ManyToOne(() => User, (user) => user.reports)
+  @ManyToOne(() => User, (user) => user.reports, { onDelete: 'CASCADE'} )
   @JoinColumn({ name: 'clienteId' })
   client: User;
 

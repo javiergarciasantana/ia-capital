@@ -1,19 +1,28 @@
 // Example in your reports.service.ts
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { History } from './history.entity';
 import { LessThanOrEqual } from 'typeorm';
+import { UsersService } from 'src/users/users.service';
 
 
 
 @Injectable()
 export class HistoryService {
+  private readonly logger = new Logger(HistoryService.name);
+  
   constructor(
     @InjectRepository(History) private HistoryRepo: Repository<History>,
+    private readonly usersService: UsersService,
   ) {}
 
   async saveHistory(clienteId: number, historyDto: any) {
+    const client = await this.usersService.findById(clienteId);
+    if (!client || !client.profile) {
+      this.logger.warn(`Client ${clienteId} not found or has no profile.`);
+      return;
+    }
     console.log("History complete obj:", historyDto);
     
     const existingHistory = await this.HistoryRepo.find({
@@ -34,7 +43,8 @@ export class HistoryService {
         fecha: new Date(entry.fecha),
         valorNeto: entry.valorNeto,
         rendimientoMensual: entry.rendimientoMensual,
-        rendimientoYTD: entry.rendimientoYTD // Note: typo in entity too
+        rendimientoYTD: entry.rendimientoYTD,
+        client
       }));
   
     if (newHistoryEntries.length > 0) {

@@ -1,6 +1,7 @@
 // --- Client Circles Panel ---
 import { useState } from "react";
 import React from "react";
+import DeleteModal from "./DeleteModal";
 
 const ClientCirclesPanel: React.FC<{
   getClientNameById: (id: number) => string;
@@ -211,10 +212,14 @@ const ClientCirclesPanel: React.FC<{
                   title="Eliminar cliente"
                   onClick={() => changingActiveId !== client.id && setDeleteModal({ open: true, client })}
                 >
-                  <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
-                    <rect x="5.5" y="8" width="9" height="7" rx="2" stroke="#fff" strokeWidth="2" />
-                    <path d="M8 8V6.5A2.5 2.5 0 0110.5 4h0A2.5 2.5 0 0113 6.5V8" stroke="#fff" strokeWidth="2" />
-                    <path d="M7 8h6" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                    <rect x="0" y="0" width="24" height="24" rx="6" fill="#ef4444" />
+                    <path
+                      d="M7 7L17 17M17 7L7 17"
+                      stroke="#fff"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
                   </svg>
                 </div>
 
@@ -330,73 +335,12 @@ const ClientCirclesPanel: React.FC<{
         `}</style>
       </div>
       {/* Delete Modal */}
-      {deleteModal.open && deleteModal.client && (
-        <div style={{
-          position: 'fixed',
-          top: 0, left: 0, width: '100vw', height: '100vh',
-          background: 'rgba(26,35,64,0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999,
-        }}>
-          <div style={{
-            background: '#fff',
-            borderRadius: 14,
-            boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
-            padding: '32px 28px',
-            minWidth: 320,
-            maxWidth: '90vw',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            animation: 'popInModal 0.3s cubic-bezier(.68,-0.55,.27,1.55)',
-          }}>
-            <div style={{ fontSize: 18, fontWeight: 700, color: '#e74c3c', marginBottom: 12 }}>
-              ¿Estás seguro que quieres eliminar al usuario?
-            </div>
-            <div style={{ fontSize: 16, color: '#1a2340', marginBottom: 24, textAlign: 'center' }}>
-              <b>{deleteModal.client.name}{deleteModal.client.surname ? ' ' + deleteModal.client.surname : ''}</b>
-            </div>
-            <div style={{ display: 'flex', gap: 18 }}>
-              <button
-                onClick={() => setDeleteModal({ open: false, client: null })}
-                style={{
-                  padding: '10px 28px',
-                  border: '1px solid #ddd',
-                  background: '#fff',
-                  color: '#555',
-                  borderRadius: '6px',
-                  fontWeight: 600,
-                  fontSize: '15px',
-                  cursor: 'pointer',
-                  transition: 'background 0.2s'
-                }}
-              >
-                No
-              </button>
-              <button
-                onClick={() => handleDeleteClient(deleteModal.client.id)}
-                style={{
-                  padding: '10px 28px',
-                  border: 'none',
-                  background: '#e74c3c',
-                  color: '#fff',
-                  borderRadius: '6px',
-                  fontWeight: 700,
-                  fontSize: '15px',
-                  cursor: 'pointer',
-                  transition: 'background 0.2s'
-                }}
-              >
-                Eliminar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Edit Modal */}
+      <DeleteModal
+        open={deleteModal.open}
+        onClose={() => setDeleteModal({ open: false, client: null })}
+        onDelete={() => handleDeleteClient(deleteModal.client?.id)}
+        thingToDelete={"al usuario?, se borrarán todos sus informes"}
+      />
       {editModal.open && editModal.client && (
         <div style={{
           position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',

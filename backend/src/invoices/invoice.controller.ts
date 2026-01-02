@@ -31,7 +31,7 @@ export class InvoiceController {
     // Set headers to display PDF in browser
     res.set({
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `inline; filename="invoice_${result.invoice.id}.pdf"`,
+      'Content-Disposition': `inline; filename="invoice_${result.invoice?.id ?? 'unknown'}.pdf"`,
     });
 
     // Send the PDF buffer (assuming result.pdf is a Buffer)

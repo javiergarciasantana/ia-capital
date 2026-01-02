@@ -1,20 +1,31 @@
 // Example in your reports.service.ts
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { Report } from './report.entity';
 import { Distribution } from './distribution.entity';
 import { ChildDistribution } from './child-distribution.entity';
+import { UsersService } from 'src/users/users.service';
+
 
 @Injectable()
 export class ReportsService {
+  private readonly logger = new Logger(ReportsService.name);
+  
   constructor(
     @InjectRepository(Report) private reportRepo: Repository<Report>,
     @InjectRepository(Distribution) private DistributionRepo: Repository<Distribution>,
     @InjectRepository(ChildDistribution) private ChildDistributionRepo: Repository<ChildDistribution>,
+    private readonly usersService: UsersService,
+    
   ) {}
 
   async saveReport(reportDto: any) {
+    const client = await this.usersService.findById(reportDto.clienteId);
+    if (!client || !client.profile) {
+      this.logger.warn(`Client ${reportDto.clienteId} not found or has no profile.`);
+      return;
+    }
     const report = this.reportRepo.create({
       clienteId: reportDto.clienteId,
       fechaInforme: reportDto.fechaInforme,
@@ -22,6 +33,7 @@ export class ReportsService {
       resumenTailored: reportDto.resumenTailored,
       resumenEjecutivo: reportDto.resumenEjecutivo,
       snapshot: reportDto.snapshot,
+      client,
       distribution: Array.isArray(reportDto.distribucion)
       ? reportDto.distribucion.map((d: any) => this.DistributionRepo.create(d))
       : [],
@@ -71,7 +83,7 @@ export class ReportsService {
       where: {
         clienteId: Number(id)
       },
-      relations: ['distribution', 'child_distribution'],
+      relations: ['distribution', 'child_distribution', 'invoice'],
       order: { fechaInforme: 'ASC' },
     });
 
@@ -147,25 +159,9 @@ export class ReportsService {
   }
 
   async deleteAllReports() {
-    // Use delete({}) instead of clear() to avoid TRUNCATE and FK constraint errors
-    // const histories = await this.HistoryRepo.find();
-    // for (const history of histories) {
-    //   await this.HistoryRepo.delete(history.id);
-    // }
-
-    const distributions = await this.DistributionRepo.find();
-    for (const distribution of distributions) {
-      await this.DistributionRepo.delete(distribution.id);
-    }
-
-    const childDistributions = await this.ChildDistributionRepo.find();
-    for (const childDistribution of childDistributions) {
-      await this.ChildDistributionRepo.delete(childDistribution.id);
-    }
-
     const reports = await this.reportRepo.find();
     for (const report of reports) {
-      await this.reportRepo.delete(report.id);
+      await this.reportRepo.remove(report);
     }
   }
 }

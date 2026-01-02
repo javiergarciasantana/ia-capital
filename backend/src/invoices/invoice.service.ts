@@ -74,6 +74,16 @@ export class InvoiceService {
     
     // Sort just in case to get the absolute latest
     const lastReport = reports.sort((a: any, b: any) => new Date(b.fechaInforme).getTime() - new Date(a.fechaInforme).getTime())[0];
+    const existingInvoice = await this.invoiceRepo.findOne({ where: { report: lastReport }, relations: ['invoicePdf'] });
+
+    if(existingInvoice) {
+      // Remove the invoice reference from lastReport since it's a one-to-one relation
+      this.logger.warn(`Factura ya generada`);
+      const invoice = await this.getInvoice(lastReport.invoice.id);
+
+      await this.deleteInvoice(existingInvoice.id);
+      return await this.generateInvoiceForClient(clientId);
+    }
     
     const patrimonioNeto = lastReport.snapshot?.patrimonioNeto || 0;
     
@@ -98,7 +108,6 @@ export class InvoiceService {
       fechaFactura: new Date(),
       descripcion: `Management Fee - ${(interval ?? 'undefined').charAt(0).toUpperCase() + (interval ?? 'undefined').slice(1)} (${new Date().getFullYear()})`,
       importe: parseFloat(amount.toFixed(2)),
-      client,
       report: lastReport
       
     });
@@ -220,6 +229,14 @@ export class InvoiceService {
     return this.invoicePdfRepo.find();
   }
 
+  async getInvoice(id: Number): Promise<Invoice | null> {
+    return this.invoiceRepo.findOne({
+      where: {
+        id: Number(id),
+      },
+      relations: ['invoicePdf']
+    });
+  }
 
   async getUserInvoices(id: Number): Promise<Invoice[]> {
     return this.invoiceRepo.find( {
@@ -249,26 +266,21 @@ export class InvoiceService {
     return this.invoiceRepo.save(invoice);
   }
 
-  async deleteAllInvoices() {
-    // Use delete({}) instead of clear() to avoid TRUNCATE and FK constraint errors
-    // const histories = await this.HistoryRepo.find();
-    // for (const history of histories) {
-    //   await this.HistoryRepo.delete(history.id);
-    // }
+  async deleteInvoice(invoiceId: number): Promise<void> {
+    const invoice = await this.invoiceRepo.findOne({ where: { id: invoiceId } });
+    if (invoice) {
+      await this.invoiceRepo.remove(invoice);
+    }
+  }
 
+  async deleteAllInvoices() {
     const invoices = await this.invoiceRepo.find();
     for (const invoice of invoices) {
       await this.invoiceRepo.remove(invoice);
     }
   }
 
-    async deleteAllPdfs() {
-    // Use delete({}) instead of clear() to avoid TRUNCATE and FK constraint errors
-    // const histories = await this.HistoryRepo.find();
-    // for (const history of histories) {
-    //   await this.HistoryRepo.delete(history.id);
-    // }
-
+  async deleteAllPdfs() {
     const invoices = await this.invoicePdfRepo.find();
     for (const invoice of invoices) {
       await this.invoicePdfRepo.remove(invoice);
