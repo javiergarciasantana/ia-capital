@@ -52,6 +52,7 @@ export class AiChatService {
         'No inventes datos ni fechas: responde únicamente con los HECHOS proporcionados por el sistema. Si falta información, dilo explícitamente.',
         'No repitas palabras ni frases.',
         'Respeta el alcance del usuario autenticado y los documentos generales.',
+        'Nunca digas el número de cliente o usuario, siempre refiérete a los usuarios por su nombre'
       ],
     };
   }

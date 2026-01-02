@@ -10,10 +10,11 @@ import { OllamaClient } from './ollama.client';
 import { UserFactsService } from './user-facts.service';
 import { ReportsModule } from '../reports/reports.module';
 import { UsersModule } from '../users/users.module';
+import { InvoiceModule } from 'src/invoices/invoice.module';
+import { HistoryModule } from 'src/history/history.module';
 
-import { UsersService } from '../users/users.service'
 @Module({
-  imports: [TypeOrmModule.forFeature([Conversation, Message]), ReportsModule, UsersModule],
+  imports: [TypeOrmModule.forFeature([Conversation, Message]), ReportsModule, UsersModule, InvoiceModule, HistoryModule],
   controllers: [AiChatController],
   providers: [AiChatService, OllamaClient, UserFactsService],
   exports: [UserFactsService],

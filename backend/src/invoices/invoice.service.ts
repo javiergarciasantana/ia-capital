@@ -1,14 +1,15 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Invoice } from './invoice.entity';
-import { InvoicePdf } from './invoicePdf.entity';
-import { UsersService } from '../users/users.service';
 import { ReportsService } from '../reports/reports.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
+import { UsersService } from '../users/users.service';
+import { Injectable, Logger } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { InvoicePdf } from './invoicePdf.entity';
+import { Invoice } from './invoice.entity';
+import { Repository, In } from 'typeorm';
+
 import * as PDFDocument from 'pdfkit';
-import * as fs from 'fs';
 import * as path from 'path';
+import * as fs from 'fs';
 
 @Injectable()
 export class InvoiceService {
@@ -229,6 +230,18 @@ export class InvoiceService {
     return this.invoicePdfRepo.find();
   }
 
+  async getInvoicesByClientIds(clientIds: number[]): Promise<Invoice[]> {
+    if (!clientIds || clientIds.length === 0) {
+      return [];
+    }
+    return this.invoiceRepo.find({
+      where: {
+        clienteId: In(clientIds),
+      },
+      relations: ['invoicePdf'],
+    });
+  }
+
   async getInvoice(id: Number): Promise<Invoice | null> {
     return this.invoiceRepo.findOne({
       where: {
@@ -238,14 +251,24 @@ export class InvoiceService {
     });
   }
 
+  async getUserInvoice(id: Number): Promise<Invoice | null> {
+    return this.invoiceRepo.findOne( {
+      where: {
+        id: Number(id),
+      },
+      relations: ['invoicePdf']
+    })
+  }
+
   async getUserInvoices(id: Number): Promise<Invoice[]> {
     return this.invoiceRepo.find( {
       where: {
         clienteId: Number(id),
       },
+      relations: ['invoicePdf']
+
     })
   }
-
 
   async getUserInvoicePdfs(id: Number): Promise<InvoicePdf[]> {
     return this.invoicePdfRepo.find( {

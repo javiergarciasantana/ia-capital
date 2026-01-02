@@ -79,6 +79,7 @@ export default function InvoiceManager() {
   const { auth } = useAuth();
   
   const [clients, setClients] = useState<User[]>([]);
+  const [invoices, setInvoices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   
@@ -127,44 +128,77 @@ export default function InvoiceManager() {
     fetchClients();
   }, [authHeaders]);
 
+useEffect(() => {
+  const fetchInvoicesForClients = async () => {
+    if (!auth?.token) return;
+    if (!clients.length) return;
+    setLoading(true);
+    try {
+      // Fetch invoices for each client in parallel
+      const allInvoices: any[] = [];
+      await Promise.all(
+        clients.map(async (client) => {
+          const res = await fetch(`${API_BASE}/invoices/user/${client.id}`, {
+            headers: authHeaders as any,
+          });
+          if (res.ok) {
+            const data = await res.json();
+            // Attach clientId to each invoice for filtering
+            const invoices = data.data
+            if (Array.isArray(invoices)) {
+              console.log('enter')
+              allInvoices.push(...invoices);
+            }
+
+          }
+        })
+      );
+      //console.log("Invoices", allInvoices)
+      setInvoices(allInvoices);
+    } catch {
+      setInvoices([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+  fetchInvoicesForClients();
+}, [auth?.token, clients, authHeaders]);
+
   // --- DOWNLOAD HANDLERS ---
 
-  const handleDownloadAllGlobal = async () => {
+const handleDownloadInvoice = async (invoiceId: number) => {
     try {
-      setIsGlobalDownloading(true);
+      setDownloadingUserId(invoiceId.toString());
       setFeedback(null);
-
-      const res = await fetch(`${API_BASE}/invoices/all-pdfs`, {
+      const res = await fetch(`${API_BASE}/invoices/${invoiceId}/download`, {
         method: 'GET',
         headers: authHeaders as any,
       });
-
       if (!res.ok) throw new Error('Error de descarga');
-
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Global_Invoices_${new Date().toISOString().split('T')[0]}.zip`; 
+      a.download = `Factura_${invoiceId}.pdf`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
-      setFeedback({ type: 'success', msg: 'Archivo global descargado correctamente.' });
     } catch (err) {
-      setFeedback({ type: 'error', msg: 'Error al descargar facturas globales.' });
+      setFeedback({ type: 'error', msg: `No se pudo descargar la factura #${invoiceId}` });
     } finally {
-      setIsGlobalDownloading(false);
+      setDownloadingUserId(null);
       setTimeout(() => setFeedback(null), 4000);
     }
   };
 
+  // Download all invoices from a User (admin only)
   const handleDownloadUserInvoices = async (userId: string, userName: string) => {
     try {
       setDownloadingUserId(userId);
       setFeedback(null);
 
-      const res = await fetch(`${API_BASE}/invoices/user/${userId}/download`, {
+      const res = await fetch(`${API_BASE}/invoices/user/${userId}/download/all-pdfs`, {
         method: 'GET',
         headers: authHeaders as any,
       });
@@ -188,10 +222,35 @@ export default function InvoiceManager() {
     }
   };
 
+  // Download all invoices (admin only)
+  const handleDownloadAll = async () => {
+    try {
+      setFeedback(null);
+      const res = await fetch(`${API_BASE}/invoices/all-pdfs`, {
+        method: 'GET',
+        headers: authHeaders as any,
+      });
+      if (!res.ok) throw new Error('Error de descarga');
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Todas_las_Facturas.zip`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (err) {
+      setFeedback({ type: 'error', msg: `No se pudo descargar el ZIP de facturas.` });
+    }
+  };
+
   const filteredUsers = clients.filter(client => 
     getClientName(client).toLowerCase().includes(searchTerm.toLowerCase()) ||
     client.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // ...imports and state as before...
 
   return (
     <div className="dashboard-container" style={{ backgroundColor: '#f4f6f8', minHeight: '100vh', paddingBottom: '40px' }}>
@@ -210,7 +269,6 @@ export default function InvoiceManager() {
       )}
 
       <div style={{ maxWidth: '1400px', margin: '0 auto', padding: '32px' }}>
-        
         {/* Header Section */}
         <div style={{ marginBottom: '32px' }}>
           <div>
@@ -248,7 +306,7 @@ export default function InvoiceManager() {
               </div>
             </div>
             <button
-              onClick={handleDownloadAllGlobal}
+              onClick={handleDownloadAll}
               disabled={isGlobalDownloading}
               style={{
                 background: isGlobalDownloading ? 'rgba(255,255,255,0.1)' : '#bfa14a',
@@ -291,78 +349,119 @@ export default function InvoiceManager() {
           <Search style={{ position: 'absolute', left: '16px', top: '16px', color: '#ccc' }} />
         </div>
 
-        {/* Client Grid */}
+        {/* Client Grid with Invoices */}
         <SectionTitle title="Directorio de Clientes" />
-        
         {loading ? (
           <div style={{ padding: '40px', textAlign: 'center', color: '#666' }}>
             <Loader2 className="animate-spin" style={{ margin: '0 auto 10px', display: 'block' }} />
             Cargando clientes...
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '24px' }}>
-            {filteredUsers.map((client) => (
-              <div key={client.id} className="card" style={{
-                background: '#fff', borderRadius: '12px', padding: '24px',
-                boxShadow: '0 4px 6px rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.04)',
-                display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-                transition: 'transform 0.2s ease',
-              }}
-              onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-4px)'}
-              onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
-              >
-                <div>
-                  <div style={{
-                    width: '56px', height: '56px', borderRadius: '50%',
-                    background: 'linear-gradient(135deg, #f0f4f8 60%, #e3e9f3 100%)',
-                    color: '#1a2340', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontWeight: 700, fontSize: '20px', marginBottom: '16px',
-                    boxShadow: '0 4px 12px rgba(26,35,64,0.08)',
-                    border: '2px solid #fff',
-                    fontFamily: 'Segoe UI, Merriweather, sans-serif',
-                  }}>
-                    {getInitials(client)}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '24px' }}>
+            {filteredUsers.map((client) => {
+              // Find all invoices for this client
+              const clientInvoices = invoices.filter(inv => String(inv.clienteId) === String(client.id));
+              return (
+                <div key={client.id} className="card" style={{
+                  background: '#fff', borderRadius: '12px', padding: '24px',
+                  boxShadow: '0 4px 6px rgba(0,0,0,0.02)', border: '1px solid rgba(0,0,0,0.04)',
+                  display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+                  transition: 'transform 0.2s ease',
+                }}
+                onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-4px)'}
+                onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                >
+                  <div>
+                    <div style={{
+                      width: '56px', height: '56px', borderRadius: '50%',
+                      background: 'linear-gradient(135deg, #f0f4f8 60%, #e3e9f3 100%)',
+                      color: '#1a2340', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontWeight: 700, fontSize: '20px', marginBottom: '16px',
+                      boxShadow: '0 4px 12px rgba(26,35,64,0.08)',
+                      border: '2px solid #fff',
+                      fontFamily: 'Segoe UI, Merriweather, sans-serif',
+                    }}>
+                      {getInitials(client)}
+                    </div>
+                    <h3 style={{
+                      fontSize: '18px', fontWeight: 600, color: '#1a2340', marginBottom: '4px',
+                      fontFamily: 'Segoe UI, sans-serif',
+                    }}>
+                      {getClientName(client)}
+                    </h3>
+                    <div style={{ fontSize: '13px', color: '#888', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#217a3c' }}></span>
+                      {client.email}
+                    </div>
                   </div>
-                  
-                  <h3 style={{
-                    fontSize: '18px', fontWeight: 600, color: '#1a2340', marginBottom: '4px',
-                    fontFamily: 'Segoe UI, sans-serif',
-                  }}>
-                    {getClientName(client)}
-                  </h3>
-                  <div style={{ fontSize: '13px', color: '#888', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#217a3c' }}></span>
-                    {client.email}
+                  {/* Invoices Table */}
+                  <div style={{ marginTop: '16px' }}>
+                    {clientInvoices.length === 0 ? (
+                      <div style={{ color: '#aaa', fontSize: 14, textAlign: 'center', margin: '16px 0' }}>
+                        No hay facturas para este cliente.
+                      </div>
+                    ) : (
+                      <table style={{ width: '100%', fontSize: 14, marginBottom: 12 }}>
+                        <thead>
+                          <tr>
+                            <th style={{ textAlign: 'left', padding: '4px 8px' }}>Fecha</th>
+                            <th style={{ textAlign: 'left', padding: '4px 8px' }}>Importe</th>
+                            <th style={{ textAlign: 'center', padding: '4px 8px' }}>Descargar</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {clientInvoices.map(inv => (
+                            <tr key={inv.id}>
+                              <td style={{ padding: '4px 8px' }}>{inv.fechaFactura?.slice(0, 10)}</td>
+                              <td style={{ padding: '4px 8px' }}>{inv.importe ? `${inv.importe} €` : ''}</td>
+                              <td style={{ padding: '4px 8px', textAlign: 'center' }}>
+                                <button
+                                  onClick={() => handleDownloadInvoice(inv.id)}
+                                  disabled={downloadingUserId === String(inv.id)}
+                                  style={{
+                                    background: '#fff',
+                                    border: '1px solid #1a2340',
+                                    color: '#1a2340',
+                                    borderRadius: 6,
+                                    padding: '4px 12px',
+                                    fontWeight: 600,
+                                    cursor: downloadingUserId === String(inv.id) ? 'not-allowed' : 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 8,
+                                    fontSize: 13,
+                                  }}
+                                >
+                                  {downloadingUserId === String(inv.id) ? <Loader2 className="animate-spin" size={14} /> : <FileText size={14} />}
+                                  {downloadingUserId === String(inv.id) ? '...' : 'PDF'}
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
                   </div>
-                </div>
-                
-                <div style={{ marginTop: '20px', borderTop: '1px solid #f5f5f5', paddingTop: '20px' }}>
-                  <button 
+                  {/* Download all for this client (if you have such endpoint) */}
+                  <button
                     onClick={() => handleDownloadUserInvoices(client.id, getClientName(client))}
-                    disabled={downloadingUserId === client.id}
-                    style={{ 
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%',
-                      padding: '12px', borderRadius: '8px', 
-                      background: downloadingUserId === client.id ? '#f4f6f8' : '#fff',
-                      border: downloadingUserId === client.id ? '1px solid #ddd' : '1px solid #1a2340',
-                      color: downloadingUserId === client.id ? '#999' : '#1a2340', 
-                      fontWeight: 600, 
-                      cursor: downloadingUserId === client.id ? 'not-allowed' : 'pointer',
-                      transition: 'all 0.2s',
-                      gap: '8px',
-                      fontSize: '14px'
+                    style={{
+                      width: '100%',
+                      background: '#bfa14a',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: 6,
+                      padding: '8px 0',
+                      fontWeight: 700,
+                      marginTop: 8,
+                      cursor: 'pointer'
                     }}
                   >
-                    {downloadingUserId === client.id ? (
-                      <Loader2 className="animate-spin" size={16} />
-                    ) : (
-                      <FileText size={16} />
-                    )}
-                    {downloadingUserId === client.id ? 'Descargando...' : 'Descargar Facturas'}
+                    Descargar todas las facturas de este cliente (ZIP)
                   </button>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 

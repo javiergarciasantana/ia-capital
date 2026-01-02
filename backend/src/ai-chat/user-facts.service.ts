@@ -1,8 +1,9 @@
-// backend/src/ai-chat/user-facts.service.ts
 import { Injectable } from '@nestjs/common';
 import { ReportsService } from '../reports/reports.service';
+import { HistoryService } from 'src/history/history.service';
+import { InvoiceService } from 'src/invoices/invoice.service';
+import { UsersService } from 'src/users/users.service';
 
-// Tipos definidos para estructurar la información
 export type ReportKPIs = {
   totalPatrimony: number;
   debt: number;
@@ -15,18 +16,24 @@ export type ReportFact = {
   id: number;
   fechaInforme: string;
   clienteId: number;
-  clientName: string; // Guardamos el nombre real aquí
+  clientName: string;
   kpis: ReportKPIs;
   resumenText: string;
+  distribution?: any[];
+  invoices?: any[];
+  history?: any[];
 };
 
 export type Facts = {
   role: string;
+  userProfile?: any;
   globalMetrics?: {
     totalAUM: number;
     totalDebt: number;
     activeClients: number;
     avgReturn: string;
+    topClients: Array<{ name: string; value: number }>;
+    aggregatedDistribution: Array<{ name: string; value: number }>;
   };
   reports: ReportFact[];
   latestReport?: ReportFact;
@@ -34,7 +41,12 @@ export type Facts = {
 
 @Injectable()
 export class UserFactsService {
-  constructor(private readonly reportsService: ReportsService) {}
+  constructor(
+    private readonly reportsService: ReportsService,
+    private readonly usersService: UsersService,
+    private readonly historyService: HistoryService,
+    private readonly invoiceService: InvoiceService,
+  ) {}
 
   private formatCurrency(val: number) {
     return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(val);
@@ -42,103 +54,124 @@ export class UserFactsService {
 
   async buildFacts(user: { id: number; role: string }): Promise<Facts> {
     let reportsRaw: any[] = [];
-    
-    // 1. Obtener datos según el rol
+    let userProfile: any = null;
+
+    // 1. Get user profile
+    const fullUser = await this.usersService.findById(user.id);
+    if (fullUser?.profile) userProfile = fullUser.profile;
+
+    // 2. Get reports
     if (user.role === 'admin') {
-      // Traemos todo el histórico relevante para construir contexto global
       reportsRaw = await this.reportsService.getReportsBetweenDates(
-        new Date('2020-01-01'), 
+        new Date('2020-01-01'),
         new Date()
       );
     } else {
       reportsRaw = await this.reportsService.getReportsForUser(user.id);
     }
 
-    // 2. Procesar y enriquecer los datos
-    const reports: ReportFact[] = reportsRaw.map((r) => {
-      // Extracción de KPIs con fallbacks seguros
-      const totalPatrimony = r.resumenEjecutivo?.totalPatrimony ?? r.snapshot?.patrimonioNeto ?? 0;
+    // 3. Get history and invoices for each report
+    const reports: ReportFact[] = await Promise.all(reportsRaw.map(async (r) => {
+      const totalPatrimony = r.resumenEjecutivo?.totalPatrimonio ?? r.snapshot?.patrimonioNeto ?? 0;
       const debt = r.snapshot?.deuda ?? 0;
-      
       let ytdStr = r.resumenEjecutivo?.rendimientoAnualActual ?? '0%';
-      // Intentar sacar dato numérico preciso del histórico si existe
       if (typeof r.history?.slice(-1)[0]?.rendimientoYTD === 'number') {
         ytdStr = `${r.history.slice(-1)[0].rendimientoYTD.toFixed(2)}%`;
       }
-
-      // Formatear desglose de bancos para lectura fácil
-      const bankBreakdown = r.resumenEjecutivo?.desgloseBancos 
+      const bankBreakdown = r.resumenEjecutivo?.desgloseBancos
         ? Object.entries(r.resumenEjecutivo.desgloseBancos).map(
             ([bank, data]: any) => `${bank}: ${this.formatCurrency(data.patrimonioNeto || 0)}`
           )
         : [];
-
-      // RESOLUCIÓN DE NOMBRE: Prioridad Nombre -> Email -> ID
-      // Esto soluciona que te salga "Cliente #6"
-      const rawClient = r.client || r.user; 
-      // Buscar el nombre del cliente por ID en reportsRaw
+      const rawClient = r.client || r.user;
       let displayName = `${r.clienteId}`;
       const clientReport = reportsRaw.find(rep => rep.clienteId === r.clienteId && (rep.client?.name || rep.user?.name));
       if (clientReport) {
         displayName = clientReport.client?.name || clientReport.user?.name || displayName;
       }
-
       const resumenText = (r.resumenEjecutivo?.resumen && r.resumenEjecutivo.resumen.length > 5)
         ? r.resumenEjecutivo.resumen
         : 'No hay un resumen narrativo disponible.';
+
+      // Fetch history and invoices for this report
+      let history: any[] = [];
+      if (user.role === 'admin') {
+        history = await this.historyService.getHistoryUpToDate?.(new Date()) ?? [];
+      } else {
+        history = await this.historyService.getHistoryForUser?.(user.id) ?? [];
+      }
+      const invoices = r.invoice ? [r.invoice] : [];
 
       return {
         id: r.id,
         fechaInforme: r.fechaInforme instanceof Date ? r.fechaInforme.toISOString() : String(r.fechaInforme),
         clienteId: r.clienteId,
-        clientName: displayName, 
-        resumenText: resumenText,
+        clientName: displayName,
+        resumenText,
         kpis: {
           totalPatrimony,
           debt,
           ytdReturn: ytdStr,
           monthlyReturn: r.history?.slice(-1)[0]?.rendimientoMensual ?? 0,
           bankBreakdown
-        }
+        },
+        distribution: r.distribution ?? [],
+        invoices,
+        history,
       };
-    });
+    }));
 
-    // Ordenar por fecha (más reciente primero)
-    reports.sort((a, b) => new Date(b.fechaInforme).getTime() - new Date(a.fechaInforme).getTime());
-
-    // 3. Generar Métricas Globales (Solo Admin)
-    // Esto acelera respuestas a preguntas tipo "¿cómo va la firma?"
+    // 4. Calculate global metrics (latest report per client)
     let globalMetrics;
     if (user.role === 'admin' && reports.length > 0) {
-      // Usar solo el último reporte por cliente para no duplicar sumas
-      const latestPerClient = new Map<number, ReportFact>();
+      const latestReportsMap = new Map<number, ReportFact>();
       reports.forEach(r => {
-        if (!latestPerClient.has(r.clienteId) || new Date(r.fechaInforme) > new Date(latestPerClient.get(r.clienteId)!.fechaInforme)) {
-          latestPerClient.set(r.clienteId, r);
+        const existing = latestReportsMap.get(r.clienteId);
+        if (!existing || new Date(r.fechaInforme) > new Date(existing.fechaInforme)) {
+          latestReportsMap.set(r.clienteId, r);
         }
       });
-
-      const uniqueReports = Array.from(latestPerClient.values());
-      const totalAUM = uniqueReports.reduce((sum, r) => sum + r.kpis.totalPatrimony, 0);
-      const totalDebt = uniqueReports.reduce((sum, r) => sum + r.kpis.debt, 0);
-      
-      const validReturns = uniqueReports
+      const uniqueReports = Array.from(latestReportsMap.values());
+      const totalAUM = uniqueReports.reduce((sum, r) => sum + (r.kpis.totalPatrimony || 0), 0);
+      const totalDebt = uniqueReports.reduce((sum, r) => sum + (r.kpis.debt || 0), 0);
+      const validYtds = uniqueReports
         .map(r => parseFloat(r.kpis.ytdReturn))
         .filter(n => !isNaN(n));
-      const avgReturn = validReturns.length 
-        ? (validReturns.reduce((a, b) => a + b, 0) / validReturns.length).toFixed(2) + '%' 
+      const avgReturn = validYtds.length
+        ? (validYtds.reduce((a, b) => a + b, 0) / validYtds.length).toFixed(2) + '%'
         : '0%';
+      // Top clients
+      const topClients = uniqueReports
+        .map(r => ({ name: r.clientName, value: r.kpis.totalPatrimony || 0 }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 5);
+      // Aggregate distribution
+      const distMap = new Map<string, number>();
+      uniqueReports.forEach(r => {
+        r.distribution?.forEach(d => {
+          if (d.categoria !== 'Total') {
+            const current = distMap.get(d.categoria) || 0;
+            distMap.set(d.categoria, current + d.valor);
+          }
+        });
+      });
+      const aggregatedDistribution = Array.from(distMap.entries())
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value);
 
       globalMetrics = {
         totalAUM,
         totalDebt,
         activeClients: uniqueReports.length,
-        avgReturn
+        avgReturn,
+        topClients,
+        aggregatedDistribution,
       };
     }
 
     return {
       role: user.role,
+      userProfile,
       reports,
       latestReport: reports[0],
       globalMetrics
@@ -151,6 +184,32 @@ export class UserFactsService {
     const lines: string[] = [];
 
     lines.push(`ROL USUARIO: ${f.role.toUpperCase()}`);
+
+    if (f.userProfile) {
+      lines.push(`\n=== PERFIL DEL USUARIO ===`);
+      lines.push(`Nombre: ${f.userProfile.firstName} ${f.userProfile.lastName}`);
+      lines.push(`Email: ${f.userProfile.email}`);
+      if (f.userProfile.feePercentage) lines.push(`Comisión: ${(f.userProfile.feePercentage * 100).toFixed(2)}%`);
+      if (f.userProfile.preferredCurrency) lines.push(`Divisa preferida: ${f.userProfile.preferredCurrency}`);
+      // Removed system.push block as 'system' is not defined
+    }
+
+    if (f.reports?.length) {
+      const recentInvoices = f.reports.flatMap(r => r.invoices || []).slice(0, 3);
+      if (recentInvoices.length) {
+        lines.push(`\n=== FACTURAS RECIENTES ===`);
+        recentInvoices.forEach(inv => {
+          lines.push(`Factura #${inv.id} (${inv.fechaFactura}): ${inv.importe}€`);
+        });
+      }
+      const recentHistory = f.reports.flatMap(r => r.history || []).slice(0, 3);
+      if (recentHistory.length) {
+        lines.push(`\n=== HISTORIAL RECIENTE ===`);
+        recentHistory.forEach(h => {
+          lines.push(`Historial: ${JSON.stringify(h)}`);
+        });
+      }
+    }
     
     // Bloque Global: Respuesta rápida para preguntas generales
     if (f.globalMetrics) {
