@@ -7,7 +7,7 @@ type OllamaChunk =
 @Injectable()
 export class OllamaClient {
   private host = process.env.OLLAMA_HOST || '/api:11434';
-  private model = 'llama3';
+  private model = process.env.OLLAMA_MODEL || 'llama3';
 
 
   /**
