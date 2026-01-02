@@ -98,11 +98,16 @@ export class InvoiceService {
       fechaFactura: new Date(),
       descripcion: `Management Fee - ${(interval ?? 'undefined').charAt(0).toUpperCase() + (interval ?? 'undefined').slice(1)} (${new Date().getFullYear()})`,
       importe: parseFloat(amount.toFixed(2)),
-      client
+      client,
+      report: lastReport
       
     });
     
     const savedInvoice = await this.invoiceRepo.save(newInvoice);
+    // Update lastReport to add savedInvoice as attribute 'invoice'
+    lastReport.invoice = savedInvoice;
+    await this.reportsService.updateReport(lastReport.id, lastReport);
+
     // 4. Generate PDF
     const pdfBuffer = await this.generateClassyPdf(newInvoice, client, patrimonioNeto, feePercentage, timeFactor);
     
@@ -117,12 +122,14 @@ export class InvoiceService {
     fs.writeFileSync(path.join(uploadDir, fileName), pdfBuffer);
 
     const newPdf = this.invoicePdfRepo.create({
-      clienteId: client.id,
       pdf: pdfBuffer,
-      client
+      clienteId: clientId,
+      invoice: savedInvoice
     })
 
-    const savedPdf = await this.invoicePdfRepo.save(newPdf);    
+    const savedPdf = await this.invoicePdfRepo.save(newPdf);  
+    savedInvoice.invoicePdf = savedPdf;  
+    await this.updateInvoice(savedInvoice.id, savedInvoice);
     this.logger.log(`Invoice generated for ${client.email}: ${amount} ${client.profile.preferredCurrency}`);
     
     return { invoice: savedInvoice, pdf: pdfBuffer };
@@ -213,6 +220,16 @@ export class InvoiceService {
     return this.invoicePdfRepo.find();
   }
 
+
+  async getUserInvoices(id: Number): Promise<Invoice[]> {
+    return this.invoiceRepo.find( {
+      where: {
+        clienteId: Number(id),
+      },
+    })
+  }
+
+
   async getUserInvoicePdfs(id: Number): Promise<InvoicePdf[]> {
     return this.invoicePdfRepo.find( {
       where: {
@@ -221,7 +238,18 @@ export class InvoiceService {
     })
   }
 
-    async deleteAllInvoices() {
+  async updateInvoice(invoiceId: number, invoiceDto: any) {
+    // Find the invoice by ID
+    const invoice = await this.invoiceRepo.findOne({ where: { id: invoiceId } });
+    if (!invoice) {
+      throw new Error(`Invoice with id ${invoiceId} not found`);
+    }
+    // Update invoice fields
+    Object.assign(invoice, invoiceDto);
+    return this.invoiceRepo.save(invoice);
+  }
+
+  async deleteAllInvoices() {
     // Use delete({}) instead of clear() to avoid TRUNCATE and FK constraint errors
     // const histories = await this.HistoryRepo.find();
     // for (const history of histories) {
@@ -230,7 +258,7 @@ export class InvoiceService {
 
     const invoices = await this.invoiceRepo.find();
     for (const invoice of invoices) {
-      await this.invoiceRepo.delete(invoice.id);
+      await this.invoiceRepo.remove(invoice);
     }
   }
 
@@ -243,7 +271,7 @@ export class InvoiceService {
 
     const invoices = await this.invoicePdfRepo.find();
     for (const invoice of invoices) {
-      await this.invoicePdfRepo.delete(invoice.id);
+      await this.invoicePdfRepo.remove(invoice);
     }
   }
 }

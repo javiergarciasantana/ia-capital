@@ -13,7 +13,6 @@ import { Report } from '../reports/report.entity';
 import { History } from '../history/history.entity';
 import { Invoice } from '../invoices/invoice.entity'
 
-
 export type UserRole = 'client' | 'admin' | 'superadmin';
 
 @Entity()
@@ -42,22 +41,20 @@ export class User {
   @CreateDateColumn() createdAt: Date;
   @UpdateDateColumn() updatedAt: Date;
 
-  // ✅ ÚNICA definición correcta del perfil
   @OneToOne(() => UserProfile, (p) => p.user, {
     cascade: true,
     eager: true,
     nullable: true,
   })
-
   @JoinColumn() // la FK se guarda en la tabla users
   profile?: UserProfile | null;
 
-  @OneToMany(() => Report, (report) => report.clienteId)
+  @OneToMany(() => Report, (report) => report.client)
   reports: Report[];
 
   @OneToMany(() => History, (history) => history.clienteId)
   history: History[];
 
-  @OneToMany(() => Invoice, (invoice) => invoice.clienteId)
+  @OneToMany(() => Invoice, (invoice) => invoice.client)
   invoices: Invoice[];
 }

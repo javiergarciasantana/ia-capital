@@ -1,4 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from 'typeorm';
 import { Report } from './report.entity';
 
 @Entity()
@@ -15,6 +15,7 @@ export class Distribution {
   @Column('float')
   porcentaje: number;
 
-  @ManyToOne(() => Report, report => report.distribution)
+  @ManyToOne(() => Report, report => report.distribution, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'reportId' })
   report: Report;
 }

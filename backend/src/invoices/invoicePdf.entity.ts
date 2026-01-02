@@ -1,5 +1,4 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToOne, ManyToOne, JoinColumn} from 'typeorm';
-import { User } from '../users/user.entity';
+import { Entity, PrimaryGeneratedColumn, Column, OneToOne, JoinColumn } from 'typeorm';
 import { Invoice } from './invoice.entity';
 
 @Entity()
@@ -13,12 +12,7 @@ export class InvoicePdf {
   @Column({ type: 'bytea', nullable: true }) // For Postgres; use 'blob' for MySQL
   pdf?: Buffer;
 
-  @ManyToOne(() => User, (user) => user.invoices) 
-  @JoinColumn({ name: 'clienteId' })
-  client: User;
-
-  @OneToOne(() => Invoice)
+  @OneToOne(() => Invoice, (invoice) => invoice.invoicePdf, { onDelete: 'CASCADE' })
   @JoinColumn()
-  relatedInvoice: Invoice;
-
+  invoice: Invoice;
 }

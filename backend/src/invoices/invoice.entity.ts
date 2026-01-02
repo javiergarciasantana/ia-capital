@@ -1,6 +1,7 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToOne, ManyToOne, JoinColumn} from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, OneToOne, ManyToOne, JoinColumn } from 'typeorm';
 import { User } from '../users/user.entity';
 import { InvoicePdf } from './invoicePdf.entity';
+import { Report } from '../reports/report.entity';
 
 @Entity()
 export class Invoice {
@@ -13,17 +14,20 @@ export class Invoice {
   @Column()
   fechaFactura: Date;
 
-  @Column('text', { nullable: true})
+  @Column('text', { nullable: true })
   descripcion: string;
 
   @Column('float')
   importe: number;
 
-  @ManyToOne(() => User, (user) => user.invoices) 
+  @ManyToOne(() => User, (user) => user.invoices)
   @JoinColumn({ name: 'clienteId' })
   client: User;
 
-  @OneToOne(() => InvoicePdf, (invoicePdf) => invoicePdf.pdf, { cascade: true })
+  @OneToOne(() => Report, (report) => report.invoice, { onDelete: 'CASCADE' })
   @JoinColumn()
+  report: Report;
+
+  @OneToOne(() => InvoicePdf, (invoicePdf) => invoicePdf.invoice,  { cascade: true, onDelete: 'CASCADE' })
   invoicePdf: InvoicePdf;
 }

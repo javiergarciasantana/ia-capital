@@ -161,7 +161,7 @@ const getInitials = (name: string) => {
 const formatDate = (dateStr: string) => {
   if (!dateStr) return '';
   const d = new Date(dateStr);
-  return d.toLocaleDateString();
+  return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
 };
 
 // Helper: Render Asset Chips
@@ -287,7 +287,7 @@ function Dashboard() {
   const { metrics, aggregatedDistribution, topClientsData } = useMemo(() => {
     if (!reports.length) return { metrics: null, aggregatedDistribution: [], topClientsData: [] };
 
-    // 1. Filter: Get only the LATEST report per client to avoid double counting AUM
+    // 1. IMPORTANT, Filter: Get only the LATEST report per client to avoid double counting AUM
     const latestReportsMap = new Map<number, ReportData>();
     reports.forEach(r => {
       const existing = latestReportsMap.get(r.clienteId);
@@ -653,7 +653,7 @@ function Dashboard() {
                       {reports.map((report) => (
                         <tr key={report.id} style={{ borderBottom: '1px solid #f1f5f9', transition: 'background 0.1s' }} className="hover:bg-gray-50">
                           <td style={{ padding: '16px 24px', color: '#334155' }}>
-                            {new Date(report.fechaInforme).toLocaleDateString()}
+                            {formatDate(report.fechaInforme)}
                           </td>
                           <td style={{ padding: '16px 24px', color: '#334155', fontWeight: 500 }}>
                             {getClientNameById(report.clienteId)}

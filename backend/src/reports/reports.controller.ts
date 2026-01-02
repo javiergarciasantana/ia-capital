@@ -85,8 +85,30 @@ export class ReportsController {
     return { message: 'Informes recuperados', data: reports };
     }
 
+
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard)
+  async deleteReportById(
+    @Param('id') id: string,
+    @User() user: any
+  ) {
+    if (user.role !== 'admin') {
+      throw new ForbiddenException('Solo los administradores pueden eliminar informes.');
+    }
+    const reportId = parseInt(id, 10);
+    if (isNaN(reportId)) {
+      throw new BadRequestException('ID de informe inválido.');
+    }
+    try {
+      await this.reportsService.deleteReport(reportId);
+      return { message: 'Informe eliminado correctamente.' };
+    } catch (error) {
+      throw new BadRequestException(error.message);
+    }
+  }
+  
   // Admin-only: Delete all reports
-  @Delete('delete-all')
+  @Delete('')
   @UseGuards(JwtAuthGuard)
   async deleteAllReports(@User() user: any) {
     if (user.role !== 'admin') {

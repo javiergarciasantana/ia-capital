@@ -4,6 +4,9 @@ import { AppModule } from './app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
 import { ValidationPipe } from '@nestjs/common';
+import { ApiKeyGuard } from './common/guards/api-key.guard';
+import { ConfigService } from '@nestjs/config';
+
 
 function parseOrigins(): string[] {
   const list = [
@@ -22,6 +25,9 @@ async function bootstrap() {
 
   // Prefijo global /api
   app.setGlobalPrefix('api');
+
+  // const configService = app.get(ConfigService);
+  // app.useGlobalGuards(new ApiKeyGuard(configService));
 
   const port = parseInt(process.env.PORT || '5000', 10);
 

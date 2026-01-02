@@ -1,14 +1,18 @@
-import { Controller, Post, Param, ParseIntPipe, Res, Delete, Get, UseGuards} from '@nestjs/common';
+import { Controller, Post, Param, ParseIntPipe, Res, Delete, Get, UseGuards, ForbiddenException} from '@nestjs/common';
 import { Response } from 'express';
+import { User } from '../auth/user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 import { InvoiceService } from './invoice.service';
+import { UsersService } from '../users/users.service';
 const archiver = require('archiver');
 
 
 @Controller('invoices')
 export class InvoiceController {
-  constructor(private readonly invoiceService: InvoiceService) {}
+  constructor(private readonly invoiceService: InvoiceService,
+              private readonly usersService: UsersService
+  ) {}
 
   // Endpoint to manually trigger invoice generation for a client
   @Post('test/:clientId')
@@ -36,7 +40,13 @@ export class InvoiceController {
   // Endpoint to get all invoice PDFs
   @Get('all-pdfs')
   @UseGuards(JwtAuthGuard)
-  async getAllInvoicePdfs(@Res() res: Response) {
+  async getAllInvoicePdfs(
+    @Res() res: Response,
+    @User() user: any
+  ) {
+    if (user.role !== 'admin') {
+      throw new ForbiddenException('Solo los administradores descargar todas las facturas.');
+    }
     const pdfs = await this.invoiceService.getAllInvoicePdfs();
 
     // Assuming pdfs is an array of objects: [{ id, pdf }]
@@ -58,11 +68,33 @@ export class InvoiceController {
     await archive.finalize();
   }
 
+  @Get('user/:id/invoice')
+  @UseGuards(JwtAuthGuard)
+  async getAllUserInvoices(
+    @Param('id') id: Number,    
+    @User() user: any,
+  ) {
+    const fullUser = await this.usersService.findById(user.id);
+    if (!fullUser.isActive) {
+      throw new ForbiddenException('Usuario no activo.');
+    }    
+    const invoices = await this.invoiceService.getUserInvoices(id);
+    return { message: 'Facturas recuperadas', data: invoices };
+  }
+
   @Get('user/:id/download')
   @UseGuards(JwtAuthGuard)
-  async getAllUserInvoicePdfs(@Res() res: Response, @Param('id') id: Number,) {
-    const pdfs = await this.invoiceService.getUserInvoicePdfs(id);
+  async getAllUserInvoicePdfs(
+    @Res() res: Response, 
+    @Param('id') id: Number, 
+    @User() user: any,
+  ) {
+    const fullUser = await this.usersService.findById(user.id);
+    if (!fullUser.isActive) {
+      throw new ForbiddenException('Usuario no activo.');
+    }  
 
+    const pdfs = await this.invoiceService.getUserInvoicePdfs(id);
     // Assuming pdfs is an array of objects: [{ id, pdf }]
     // Create a zip file with all PDFs
     res.set({
@@ -84,12 +116,20 @@ export class InvoiceController {
 
   // Endpoint to delete all invoices
   @Delete('delete-all')
-  async deleteAllInvoices(@Res() res: Response) {
+  @UseGuards(JwtAuthGuard)
+  async deleteAllInvoices(
+    @Res() res: Response, 
+    @User() user: any
+  ) {
+    if (user.role !== 'admin') {
+      throw new ForbiddenException('Solo los administradores pueden eliminar facturas.');
+    }
     await this.invoiceService.deleteAllInvoices();
     return res.status(200).json({ message: 'All invoices deleted successfully.' });
   }
 
   @Delete('delete-all-pdfs')
+  @UseGuards(JwtAuthGuard)
   async deleteAllPdf(@Res() res: Response) {
     await this.invoiceService.deleteAllPdfs();
     return res.status(200).json({ message: 'All PDFs deleted successfully.' });

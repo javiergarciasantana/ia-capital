@@ -7,7 +7,7 @@ import { UsersService } from '../src/users/users.service';
 
 const XLSX_DIR = '/app/reports/'; // Adjust as needed
 const API_BASE = 'http://localhost:5000/api/xlsx'; // Adjust port/path as needed
-const ADMIN_JWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjUsImVtYWlsIjoiYWRtaW5AaWEuY2FwaXRhbCIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc2NzE4MTc5NywiZXhwIjoxNzY3MTg4OTk3fQ.LMo6rb_0lPycjvLZhSrY5sutK6Rjg6ZTdddO9lp4Djs';
+const ADMIN_JWT = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOjEsImVtYWlsIjoiYWRtaW5AaWEuY2FwaXRhbCIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc2NzM0OTQyNSwiZXhwIjoxNzY3MzU2NjI1fQ.0iWVW9yuOnuxhl4kUG9TJm3CjCbOFrpqHHJVGDb1hdA';
 async function main() {
   const app = await NestFactory.createApplicationContext(AppModule);
   const usersService = app.get(UsersService);
@@ -79,7 +79,8 @@ async function main() {
       <p>Saludos,<br>Equipo IA Capital</p>
     `;
     // 2. Publish
-    const monthYear = new Date().toISOString().slice(0, 7); // Or extract from filename
+    const date = new Date("2025-06-01")
+    const monthYear = date;
     await axios.post(
       `${API_BASE}/${client.id}/publish`,
       {

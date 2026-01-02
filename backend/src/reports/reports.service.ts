@@ -97,6 +97,55 @@ export class ReportsService {
     return reports;
   }
 
+  async updateReport(reportId: number, reportDto: any) {
+    const report = await this.reportRepo.findOne({
+      where: { id: reportId },
+      relations: ['distribution', 'child_distribution'],
+    });
+
+    if (!report) {
+      throw new Error('Report not found');
+    }
+
+    // Update main report fields
+    report.clienteId = reportDto.clienteId ?? report.clienteId;
+    report.fechaInforme = reportDto.fechaInforme ?? report.fechaInforme;
+    report.resumenGlobal = reportDto.resumenGlobal ?? report.resumenGlobal;
+    report.resumenTailored = reportDto.resumenTailored ?? report.resumenTailored;
+    report.resumenEjecutivo = reportDto.resumenEjecutivo ?? report.resumenEjecutivo;
+    report.snapshot = reportDto.snapshot ?? report.snapshot;
+
+    // Optionally update distributions if provided
+    if (Array.isArray(reportDto.distribucion)) {
+      // Remove old distributions
+      await this.DistributionRepo.delete({ report: { id: reportId } });
+      // Add new distributions
+      report.distribution = reportDto.distribucion.map((d: any) => this.DistributionRepo.create(d));
+    }
+
+    if (Array.isArray(reportDto.distribucion_hijos)) {
+      // Remove old child distributions
+      await this.ChildDistributionRepo.delete({ report: { id: reportId } });
+      // Add new child distributions
+      report.child_distribution = reportDto.distribucion_hijos.map((d: any) => this.ChildDistributionRepo.create(d));
+    }
+
+    return this.reportRepo.save(report);
+  }
+
+  async deleteReport(reportId: number) {
+    // Find the report with its invoice and invoicePdf relations
+    const report = await this.reportRepo.findOne({
+      where: { id: reportId }
+    });
+
+    if (!report) {
+      throw new Error('Report not found');
+    }
+    // Delete the report itself
+    await this.reportRepo.remove(report);
+  }
+
   async deleteAllReports() {
     // Use delete({}) instead of clear() to avoid TRUNCATE and FK constraint errors
     // const histories = await this.HistoryRepo.find();

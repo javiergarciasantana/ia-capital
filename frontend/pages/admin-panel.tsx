@@ -124,6 +124,7 @@ function AdminPanel() {
   const [clients, setClients] = useState<any[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [reportPreview, setReportPreview] = useState<Report | null>(null);
+  const [editingDate, setEditingDate] = useState(false);
   const [uploadingClientId, setUploadingClientId] = useState<number | null>(null);
   const [publishing, setPublishing] = useState(false);
 
@@ -184,6 +185,15 @@ function AdminPanel() {
     } finally {
       setUploadingClientId(null);
     }
+  };
+
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!reportPreview) return;
+    setReportPreview({
+      ...reportPreview,
+      fechaInforme: e.target.value,
+    });
+    setEditingDate(false);
   };
 
   const handlePublish = async () => {
@@ -262,7 +272,7 @@ function AdminPanel() {
         {/* Header Section */}
         <div style={{ marginBottom: '32px' }}>
           <h2 style={{ fontSize: '28px', fontWeight: 300, color: '#1a2340', margin: 0 }}>
-        Gestión de <b style={{ fontWeight: 700 }}>Clientes</b>
+            Gestión de <b style={{ fontWeight: 700 }}>Clientes</b>
           </h2>
             <p style={{ color: '#666', marginTop: '8px', textAlign: 'center' }}>Seleccione un cliente para subir y generar un nuevo informe mensual.</p>
         </div>
@@ -371,7 +381,40 @@ function AdminPanel() {
               <div>
                 <h2 style={{ margin: 0, color: '#1a2340', fontSize: '20px', fontWeight: 700 }}>Vista Previa de Informe</h2>
                 <p style={{ margin: '4px 0 0', color: '#666', fontSize: '13px' }}>
-                  Fecha del reporte: <b style={{color: '#1a2340'}}>{formatDate(reportPreview.fechaInforme)}</b>
+                  Fecha del reporte:{' '}
+                  {editingDate ? (
+                    <input
+                      type="date"
+                      value={reportPreview.fechaInforme?.slice(0, 10) || ''}
+                      onChange={handleDateChange}
+                      onBlur={() => setEditingDate(false)}
+                      style={{
+                        fontSize: '13px',
+                        color: '#1a2340',
+                        border: '1px solid #bfa14a',
+                        borderRadius: 4,
+                        padding: '2px 6px',
+                      }}
+                      autoFocus
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#1a2340',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        fontSize: '13px',
+                        padding: 0,
+                      }}
+                      onClick={() => setEditingDate(true)}
+                      title="Cambiar fecha"
+                    >
+                      {formatDate(reportPreview.fechaInforme)}
+                    </button>
+                  )}
                 </p>
               </div>
               <div style={{ textAlign: 'right' }}>
