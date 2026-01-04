@@ -200,7 +200,7 @@ function AdminPanel() {
     if (!reportPreview) return;
     setPublishing(true);
     try {
-      const res = await fetch(`${API_BASE}/xlsx/${reportPreview.clienteId}/publish`, {
+      const res = await fetch(`${API_BASE}/reports/${reportPreview.clienteId}/publish`, {
         method: 'POST',
         headers: authHeaders,
         body: JSON.stringify({
@@ -381,40 +381,40 @@ function AdminPanel() {
               <div>
                 <h2 style={{ margin: 0, color: '#1a2340', fontSize: '20px', fontWeight: 700 }}>Vista Previa de Informe</h2>
                 <p style={{ margin: '4px 0 0', color: '#666', fontSize: '13px' }}>
-                  Fecha del reporte:{' '}
-                  {editingDate ? (
-                    <input
-                      type="date"
-                      value={reportPreview.fechaInforme?.slice(0, 10) || ''}
-                      onChange={handleDateChange}
-                      onBlur={() => setEditingDate(false)}
-                      style={{
-                        fontSize: '13px',
-                        color: '#1a2340',
-                        border: '1px solid #bfa14a',
-                        borderRadius: 4,
-                        padding: '2px 6px',
-                      }}
-                      autoFocus
-                    />
-                  ) : (
-                    <button
-                      type="button"
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#1a2340',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        fontSize: '13px',
-                        padding: 0,
-                      }}
-                      onClick={() => setEditingDate(true)}
-                      title="Cambiar fecha"
-                    >
-                      {formatDate(reportPreview.fechaInforme)}
-                    </button>
-                  )}
+                  Fecha del informe:{' '}
+                    {editingDate ? (
+                      <input
+                        type="date"
+                        value={reportPreview.fechaInforme?.slice(0, 10) || ''}
+                        onChange={handleDateChange}
+                        onBlur={() => setEditingDate(false)}
+                        style={{
+                          fontSize: '13px',
+                          color: '#1a2340',
+                          border: '1px solid #bfa14a',
+                          borderRadius: 4,
+                          padding: '2px 6px',
+                        }}
+                        autoFocus
+                      />
+                    ) : (
+                      <button
+                        type="button"
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#1a2340',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          fontSize: '13px',
+                          padding: 0,
+                        }}
+                        onClick={() => setEditingDate(true)}
+                        title="Cambiar fecha"
+                      >
+                        {formatDate(reportPreview.fechaInforme)}
+                      </button>
+                    )}
                 </p>
               </div>
               <div style={{ textAlign: 'right' }}>

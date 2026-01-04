@@ -3,10 +3,20 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
 import { Report } from './report.entity';
+import { ReportPdf } from './reportPdf.entity';
 import { Distribution } from './distribution.entity';
 import { ChildDistribution } from './child-distribution.entity';
 import { UsersService } from 'src/users/users.service';
 
+import * as PDFDocument from 'pdfkit';
+import * as path from 'path';
+import * as fs from 'fs';
+
+
+const MONTHS_ES = [
+  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+];
 
 @Injectable()
 export class ReportsService {
@@ -14,6 +24,8 @@ export class ReportsService {
   
   constructor(
     @InjectRepository(Report) private reportRepo: Repository<Report>,
+    @InjectRepository(ReportPdf) private reportPdfRepo: Repository<ReportPdf>,
+
     @InjectRepository(Distribution) private DistributionRepo: Repository<Distribution>,
     @InjectRepository(ChildDistribution) private ChildDistributionRepo: Repository<ChildDistribution>,
     private readonly usersService: UsersService,
@@ -21,6 +33,15 @@ export class ReportsService {
   ) {}
 
   async saveReport(reportDto: any) {
+    
+    const existingReport = await this.reportRepo.findOne({ where: { fechaInforme: reportDto.fechaInforme }});
+    
+    if(existingReport) {
+      // Remove the invoice reference from lastReport since it's a one-to-one relation
+      this.logger.warn(`Informe ya generado`);      
+      await this.deleteReport(existingReport.id);
+    }
+
     const client = await this.usersService.findById(reportDto.clienteId);
     if (!client || !client.profile) {
       this.logger.warn(`Client ${reportDto.clienteId} not found or has no profile.`);
@@ -41,12 +62,78 @@ export class ReportsService {
       ? reportDto.distribucion_hijos.map((d: any) => this.ChildDistributionRepo.create(d))
       : [],
     });
-    return this.reportRepo.save(report);
+    const savedReport = await this.reportRepo.save(report);
+    
+    const pdfBuffer = await this.generateReportPdf(savedReport, client);
+    
+    const newPdf = this.reportPdfRepo.create({
+      pdf: pdfBuffer, 
+      clienteId: reportDto.clienteId,
+      report: savedReport
+    })
+    
+    const savedPdf = await this.reportPdfRepo.save(newPdf);  
+    savedReport.reportPdf = savedPdf;  
+    await this.updateReport(savedReport.id, savedReport);
+    
+    return { report: savedReport, pdf: pdfBuffer };
+  }
+
+  private async generateReportPdf(report: any, client: any): Promise<Buffer> {
+    return new Promise((resolve, reject) => {
+      const doc = new PDFDocument({ autoFirstPage: false });
+      const buffers: Buffer[] = [];
+
+      doc.on('data', buffers.push.bind(buffers));
+      doc.on('end', () => {
+        resolve(Buffer.concat(buffers));
+      });
+
+      // --- COVER PAGE ---
+      doc.addPage();
+
+      // Logo
+      const logoPath = path.join(__dirname, '..', 'common', 'logo.png');
+      if (fs.existsSync(logoPath)) {
+        doc.image(logoPath, 50, 40, { width: 120 });
+      }
+
+      // Title
+      const fecha = new Date(report.fechaInforme);
+      const mes = MONTHS_ES[fecha.getMonth()];
+      const year = fecha.getFullYear();
+      const nombre = client?.profile?.firstname || '';
+      const apellido = client?.profile?.lastname || '';
+      const fullName = `${nombre} ${apellido}`.trim();
+
+      doc.fontSize(28)
+        .fillColor('#1a2340')
+        .text(`${fullName}`, 200, 120, { align: 'left' });
+
+      doc.moveDown();
+      doc.fontSize(22)
+        .fillColor('#bfa14a')
+        .text(`Análisis ${mes} ${year}`, { align: 'left' });
+
+      // --- RESUMEN GLOBAL ---
+      doc.addPage();
+      doc.fontSize(18).fillColor('#1a2340').text('Resumen Global', { underline: true });
+      doc.moveDown();
+      doc.fontSize(12).fillColor('#222').text(report.resumenGlobal || 'Sin resumen global.');
+
+      // --- RESUMEN TAILORED ---
+      doc.addPage();
+      doc.fontSize(18).fillColor('#1a2340').text('Resumen Personalizado', { underline: true });
+      doc.moveDown();
+      doc.fontSize(12).fillColor('#222').text(report.resumenTailored || 'Sin resumen personalizado.');
+
+      doc.end();
+    });
   }
 
   async getReports() {
     const reports = await this.reportRepo.find({
-      relations: ['distribution', 'child_distribution'],
+      relations: ['distribution', 'child_distribution', 'reportPdf'],
       order: { fechaInforme: 'ASC' },
     });
 
@@ -76,6 +163,14 @@ export class ReportsService {
       order: { fechaInforme: 'ASC' },
     });
     return reports;
+  }
+
+  async getReportPdfForUser(reportId: number): Promise<ReportPdf | null> {
+    const report = await this.reportRepo.findOne({
+      where: { id: reportId },
+      relations: ['reportPdf'],
+    });
+    return report?.reportPdf ?? null;
   }
 
   async getReportsForUser(id: Number) {
@@ -112,12 +207,13 @@ export class ReportsService {
   async updateReport(reportId: number, reportDto: any) {
     const report = await this.reportRepo.findOne({
       where: { id: reportId },
-      relations: ['distribution', 'child_distribution'],
+      relations: ['distribution', 'child_distribution', 'reportPdf'],
     });
 
     if (!report) {
       throw new Error('Report not found');
     }
+    console.log("fecha", reportDto.fechaInforme)
 
     // Update main report fields
     report.clienteId = reportDto.clienteId ?? report.clienteId;
@@ -126,6 +222,7 @@ export class ReportsService {
     report.resumenTailored = reportDto.resumenTailored ?? report.resumenTailored;
     report.resumenEjecutivo = reportDto.resumenEjecutivo ?? report.resumenEjecutivo;
     report.snapshot = reportDto.snapshot ?? report.snapshot;
+    report.reportPdf = reportDto.reportPdf ?? report.reportPdf;
 
     // Optionally update distributions if provided
     if (Array.isArray(reportDto.distribucion)) {

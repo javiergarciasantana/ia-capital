@@ -1,6 +1,8 @@
-import { Controller,UseGuards, Param, Body, Get, ForbiddenException } from '@nestjs/common';
+import { Controller,UseGuards, Param, Body, Get, Post, ForbiddenException, Res } from '@nestjs/common';
 import { BadRequestException } from '@nestjs/common';
+import { Response } from 'express';
 import { ReportsService } from '../reports/reports.service';
+import { HistoryService } from 'src/history/history.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { UsersService } from '../users/users.service'; 
 import { User } from '../auth/user.decorator';
@@ -12,9 +14,55 @@ import { Delete } from '@nestjs/common';
 export class ReportsController {
   constructor(
     private readonly reportsService: ReportsService,
-    private readonly usersService: UsersService
+    private readonly usersService: UsersService,
+    private readonly historyService: HistoryService
+
   ) {}
 
+  // Admin-only: Publish processed info (requires clientId, report, and monthYear)
+  @Post(':id/publish')
+  @UseGuards(JwtAuthGuard)
+  async publish(
+    @Body() body: { 
+      clientId: number, 
+      report: any, 
+      monthYear: string,
+      resumenGlobal: string,      
+      resumenTailored: string 
+    }, 
+    @User() user: any
+  ) {
+      if (user.role !== 'admin') {
+        throw new ForbiddenException('Solo los administradores pueden subir archivos.');
+      }
+      const { clientId, report, monthYear, resumenGlobal, resumenTailored } = body;
+      if (!clientId || !report || !monthYear) {
+        throw new BadRequestException('Missing required fields: clientId, report, monthYear');
+      }
+
+      try {
+        await this.reportsService.saveReport({
+          ...report,
+          clienteId: clientId,
+          fechaInforme: monthYear,
+          resumenGlobal: resumenGlobal,
+          resumenTailored: resumenTailored
+        });
+
+      } catch (error) {
+        throw new BadRequestException(`Error al guardar el informe: ${error.message}`);
+      }
+
+      try {
+        await this.historyService.saveHistory(
+          clientId,
+          report.historico
+        );
+      } catch (error) {
+        throw new BadRequestException(`Error al guardar el histórico: ${error.message}`);
+      }
+      return { message: 'Publicado correctamente', clientId, monthYear, data: report};
+  }
   // Admin-only: Get all reports between two dates
   @Get('all/:from/:to')
   @UseGuards(JwtAuthGuard)
@@ -85,6 +133,20 @@ export class ReportsController {
     return { message: 'Informes recuperados', data: reports };
     }
 
+  @Get(':id/pdf')
+  @UseGuards(JwtAuthGuard)
+  async getReportPdf(@Param('id') id: number, @Res() res: Response) {
+    const reportPdf = await this.reportsService.getReportPdfForUser(id);
+
+    if (!reportPdf?.pdf) {
+      return res.status(404).json({ message: 'PDF not found' });
+    }
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `inline; filename="report_${id}.pdf"`,
+    });
+    return res.send(reportPdf?.pdf);
+  }
 
   @Delete(':id')
   @UseGuards(JwtAuthGuard)

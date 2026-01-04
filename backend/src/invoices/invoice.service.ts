@@ -77,10 +77,9 @@ export class InvoiceService {
     const lastReport = reports.sort((a: any, b: any) => new Date(b.fechaInforme).getTime() - new Date(a.fechaInforme).getTime())[0];
     const existingInvoice = await this.invoiceRepo.findOne({ where: { report: lastReport }, relations: ['invoicePdf'] });
 
-    if(existingInvoice) {
+    if (existingInvoice) {
       // Remove the invoice reference from lastReport since it's a one-to-one relation
       this.logger.warn(`Factura ya generada`);
-      const invoice = await this.getInvoice(lastReport.invoice.id);
 
       await this.deleteInvoice(existingInvoice.id);
       return await this.generateInvoiceForClient(clientId);
@@ -120,17 +119,7 @@ export class InvoiceService {
 
     // 4. Generate PDF
     const pdfBuffer = await this.generateClassyPdf(newInvoice, client, patrimonioNeto, feePercentage, timeFactor);
-    
-    // 5. Save PDF to disk (or upload to S3)
-    const fileName = `invoice_${newInvoice.id}_${client.id}.pdf`;
-    const uploadDir = path.join(__dirname, '..', '..', 'uploads', 'invoices');
-    
-    if (!fs.existsSync(uploadDir)){
-      fs.mkdirSync(uploadDir, { recursive: true });
-    }
-    
-    fs.writeFileSync(path.join(uploadDir, fileName), pdfBuffer);
-
+  
     const newPdf = this.invoicePdfRepo.create({
       pdf: pdfBuffer,
       clienteId: clientId,

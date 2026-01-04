@@ -2,6 +2,7 @@ import { Entity, PrimaryGeneratedColumn, Column, OneToMany, ManyToOne, JoinColum
 import { Distribution } from './distribution.entity';
 import { ChildDistribution } from './child-distribution.entity';
 import { User } from '../users/user.entity';
+import { ReportPdf } from './reportPdf.entity';
 import { Invoice } from 'src/invoices/invoice.entity';
 
 @Entity()
@@ -12,7 +13,7 @@ export class Report {
   @Column()
   clienteId: number;
 
-  @Column()
+  @Column({ nullable: false })
   fechaInforme: Date;
 
   @Column('text', { nullable: true })
@@ -36,6 +37,9 @@ export class Report {
 
   @OneToMany(() => ChildDistribution, childDistribution => childDistribution.report, { cascade: true, onDelete: 'CASCADE' })
   child_distribution: ChildDistribution[];
+
+  @OneToOne(() => ReportPdf, (reportPdf) => reportPdf.report,  { cascade: true, onDelete: 'CASCADE' })
+  reportPdf: ReportPdf;
 
   @OneToOne(() => Invoice, (invoice) => invoice.report, { cascade: true, onDelete: 'CASCADE' })
   invoice: Invoice;

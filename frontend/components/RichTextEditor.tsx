@@ -69,8 +69,8 @@ export default function RichTextEditor({ value, onChange }: { value: string, onC
           style={{
             padding: '6px 12px',
             border: '1px solid #d1d5db',
-            background: editor.isActive('strike') ? '#1a2340' : '#fff',
-            color: editor.isActive('strike') ? '#fff' : '#374151',
+            background: editor.isActive('underline') ? '#1a2340' : '#fff',
+            color: editor.isActive('underline') ? '#fff' : '#374151',
             borderRadius: '4px',
             cursor: 'pointer',
             textDecoration: 'underline',
@@ -86,8 +86,8 @@ export default function RichTextEditor({ value, onChange }: { value: string, onC
           style={{
             padding: '6px 12px',
             border: '1px solid #d1d5db',
-            background: editor.isActive('underline') ? '#1a2340' : '#fff',
-            color: editor.isActive('underline') ? '#fff' : '#374151',
+            background: editor.isActive('strike') ? '#1a2340' : '#fff',
+            color: editor.isActive('strike') ? '#fff' : '#374151',
             borderRadius: '4px',
             cursor: 'pointer',
             textDecoration: 'line-through',
@@ -130,7 +130,21 @@ export default function RichTextEditor({ value, onChange }: { value: string, onC
         </button>
 
         <div style={{ width: '1px', background: '#d1d5db', margin: '0 4px' }} />
-
+        <button
+          onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
+          style={{
+            padding: '6px 12px',
+            border: '1px solid #d1d5db',
+            background: editor.isActive('heading', { level: 1 }) ? '#1a2340' : '#fff',
+            color: editor.isActive('heading', { level: 1 }) ? '#fff' : '#374151',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '14px',
+            fontWeight: 'bold'
+          }}
+        >
+          H1
+        </button>
         <button
           onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
           style={{

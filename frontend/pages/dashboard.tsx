@@ -149,14 +149,6 @@ const SectionTitle = ({ title }: { title: string }) => (
   }}>{title}</h3>
 );
 
-// Helper: Get Initials
-const getInitials = (name: string) => {
-  if (!name) return '';
-  const parts = name.split(/[@.\s]+/).filter(Boolean);
-  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-  return (parts[0][0] + (parts[1][0] || '')).toUpperCase();
-};
-
 // Helper: Format Date
 const formatDate = (dateStr: string) => {
   if (!dateStr) return '';
@@ -183,8 +175,6 @@ const renderAssetChips = (distribution: DistributionItem[], exclude: string, col
     ))}
   </div>
 );
-
-
 
 // --- MAIN DASHBOARD COMPONENT ---
 function Dashboard() {
@@ -670,6 +660,8 @@ function Dashboard() {
                         <th style={{ padding: '16px 24px', textAlign: 'right', color: '#64748b', fontWeight: 600 }}>Patrimonio Neto</th>
                         <th style={{ padding: '16px 24px', textAlign: 'right', color: '#64748b', fontWeight: 600 }}>Ratio Deuda</th>
                         <th style={{ padding: '16px 24px', textAlign: 'right', color: '#64748b', fontWeight: 600 }}>Rentabilidad YTD</th>
+                        <th style={{ padding: '16px 24px', textAlign: 'right', color: '#64748b', fontWeight: 600 }}>Pdf</th>
+
                         <th style={{ padding: '16px 24px', textAlign: 'center', color: '#64748b', fontWeight: 600 }}>Detalles</th>
                         <th style={{ padding: '16px 24px', textAlign: 'center', color: 'rgba(255, 0, 0, 1)', fontWeight: 600 }}>Eliminar</th>
 
@@ -697,6 +689,33 @@ function Dashboard() {
                             fontWeight: 700
                           }}>
                             {report.resumenEjecutivo?.rendimientoAnualActual}
+                          </td>
+                          <td style={{ padding: '16px 24px', textAlign: 'right' }}>
+                            <button
+                              style={{
+                                background: 'none',
+                                border: '1px solid #e2e8f0',
+                                padding: '6px 12px',
+                                borderRadius: 6,
+                                cursor: 'pointer',
+                                fontSize: 12,
+                                fontWeight: 600,
+                                color: '#475569'
+                              }}
+                              onClick={async () => {
+                                const res = await fetch(`/api/reports/${report.id}/pdf`, {
+                                  headers: { Authorization: `Bearer ${auth.token}` }
+                                });
+                                if (!res.ok) return alert('No se pudo descargar el PDF');
+                                const blob = await res.blob();
+                                const url = window.URL.createObjectURL(blob);
+                                window.open(url, '_blank');
+                                // Optionally, revoke the object URL after some time
+                                setTimeout(() => window.URL.revokeObjectURL(url), 10000);
+                              }}
+                            >
+                              Ver PDF
+                            </button>
                           </td>
                           <td style={{ padding: '16px 24px', textAlign: 'center' }}>
                             <button
