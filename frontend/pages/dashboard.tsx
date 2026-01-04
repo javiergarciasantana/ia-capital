@@ -1102,6 +1102,7 @@ const UserReportsDashboard = ({
   CardStyle,
   formatDate,
 }: any) => {
+  
   const [userReports, setUserReports] = useState<ReportData[]>([]);
   const [userHistory, setUserHIstory] = useState<ReportData[]>([]);
   const [loading, setLoading] = useState(false);
@@ -1182,7 +1183,6 @@ const UserReportsDashboard = ({
 
   function filterHistoryUpToDate(history: any[], toDate: string | Date) {
 
-    console.log("history: " + history)
     const cutoff = typeof toDate === 'string' ? new Date(toDate) : toDate;
     return history.filter(h => new Date(h.fecha) <= cutoff);
   }
@@ -1265,6 +1265,33 @@ const UserReportsDashboard = ({
                 <div style={{ color: '#64748b', fontSize: 14, marginTop: 2 }}>
                   <b>Patrimonio Neto:</b> {formatCurrency(selectedReport.resumenEjecutivo?.totalPatrimonio)}
                 </div>
+                <button
+                  style={{
+                  background: '#e0f2fe',
+                  border: '1px solid #bae6fd',
+                  padding: '6px 14px',
+                  borderRadius: 8,
+                  cursor: 'pointer',
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: '#0369a1',
+                  marginTop: 8,
+                  transition: 'background 0.2s ease',
+                  }}
+                  onClick={async () => {
+                  if (!selectedReport) return;
+                  const res = await fetch(`/api/reports/${selectedReport.id}/pdf`, {
+                    headers: { Authorization: `Bearer ${auth.token}` }
+                  });
+                  if (!res.ok) return alert('No se pudo descargar el PDF');
+                  const blob = await res.blob();
+                  const url = window.URL.createObjectURL(blob);
+                  window.open(url, '_blank');
+                  setTimeout(() => window.URL.revokeObjectURL(url), 10000);
+                  }}
+                >
+                  Descargar PDF
+                </button>
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ fontSize: 13, color: '#999', textTransform: 'uppercase' }}>Rentabilidad YTD</div>

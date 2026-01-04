@@ -133,7 +133,7 @@ export class ReportsService {
 
   async getReports() {
     const reports = await this.reportRepo.find({
-      relations: ['distribution', 'child_distribution', 'reportPdf'],
+      relations: ['distribution', 'child_distribution'],
       order: { fechaInforme: 'ASC' },
     });
 
@@ -166,11 +166,9 @@ export class ReportsService {
   }
 
   async getReportPdfForUser(reportId: number): Promise<ReportPdf | null> {
-    const report = await this.reportRepo.findOne({
-      where: { id: reportId },
-      relations: ['reportPdf'],
+    return await this.reportPdfRepo.findOne({
+      where: { report: { id: reportId }},
     });
-    return report?.reportPdf ?? null;
   }
 
   async getReportsForUser(id: Number) {
