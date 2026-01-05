@@ -135,7 +135,7 @@ function ChatPage() {
     abortRef.current = controller;
 
     try {
-      const res = await fetch(`${process.env.NEXT_API_PROXY_ORIGIN || 'http://localhost:5000/api'}/ai/chat`, {
+      const res = await fetch(`api/ai/chat`, {
         method: 'POST',
         headers: headers, // Your useMemo for headers is still perfect
         body: JSON.stringify({ messages: [userMsg] }),
