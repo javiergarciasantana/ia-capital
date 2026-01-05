@@ -17,6 +17,8 @@ export class UserProfile {
     // Identificación / PII
     @Column({ nullable: false }) firstName?: string;
     @Column({ nullable: true }) lastName?: string;
+    @Column({ type: 'varchar', nullable: true })
+    profileImageUrl?: string;
     @Column({ nullable: true }) phone?: string;
     @Column({ nullable: true }) country?: string;
     @Column({ nullable: true }) city?: string;
