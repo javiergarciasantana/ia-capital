@@ -30,6 +30,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-i18next": "^15.5.3",
+    "react-toastify": "^11.0.5",
     "recharts": "^3.6.0"
   },
   "devDependencies": {

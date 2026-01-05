@@ -7,6 +7,8 @@ import { ValidationPipe } from '@nestjs/common';
 import { ApiKeyGuard } from './common/guards/api-key.guard';
 import { ConfigService } from '@nestjs/config';
 import * as dotenv from 'dotenv';
+import { HttpExceptionFilter } from './common/http-exception.filter';
+
 
 dotenv.config();
 
@@ -43,7 +45,7 @@ async function bootstrap() {
 
   // Archivos estáticos (PDFs)
   app.useStaticAssets(join(process.cwd(), 'uploads'), { prefix: '/uploads/' });
-
+  app.useGlobalFilters(new HttpExceptionFilter());
   // CORS (incluye preflight correcto)
   app.enableCors({
     origin: (origin, cb) => cb(null, true),

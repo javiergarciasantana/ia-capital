@@ -68,6 +68,9 @@ export default function MobileMenu() {
           {(auth?.role === 'admin' || auth?.role === 'superadmin') && (
             <li onClick={() => navigateTo('/invoices')}>Facturas</li>
           )}
+          {(auth?.role === 'client') && (
+            <li onClick={() => navigateTo('/my-invoices')}> Mis Facturas</li>
+          )}
           <li onClick={() => navigateTo('/chat')}>Chat</li>
           {/* <li onClick={() => navigateTo('/settings')}>Configuración</li> */}
           <li onClick={logout}>Cerrar sesión</li>

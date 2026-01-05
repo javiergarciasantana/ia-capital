@@ -33,7 +33,7 @@ RUN npm run build && test -f dist/src/main.js
   COPY --from=builder /app/backend/node_modules ./node_modules
   COPY --from=builder /app/backend/dist ./dist
   COPY --from=builder /app/backend/package*.json ./
-  COPY ./src/common/logo.png ./dist/src/common/logo.png
+  COPY --from=builder /app/backend/src/common/*.png ./dist/src/common/
 
 # Create uploads directory for file storage (important for file uploads)
 RUN mkdir -p /app/backend/uploads

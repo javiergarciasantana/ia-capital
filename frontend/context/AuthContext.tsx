@@ -13,6 +13,7 @@ type AuthData = {
 
 interface AuthContextType {
   auth: AuthData | null;
+  loading: boolean;
   login: (token: string) => void;
   logout: () => void;
 }
@@ -21,6 +22,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [auth, setAuth] = useState<AuthData | null>(null);
+  const [loading, setLoading] = useState(true); // Start in a loading state
+
   const router = useRouter();
 
   useEffect(() => {
@@ -40,6 +43,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setAuth(null);
       }
     }
+    setLoading(false)
   }, []);
 
   const login = (token: string) => {
@@ -66,7 +70,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ auth, login, logout }}>
+    <AuthContext.Provider value={{ auth, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

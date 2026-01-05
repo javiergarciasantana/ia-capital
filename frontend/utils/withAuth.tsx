@@ -2,22 +2,25 @@ import { useAuth } from '../context/AuthContext';
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
 
-export const withAuth = (Component: any, allowedRoles?: string[]) => {
+export const withAuth = (WrappedComponent: any, allowedRoles?: string[]) => {
   return function ProtectedComponent(props: any) {
-    const { auth } = useAuth();
+    const { auth, loading } = useAuth();
     const router = useRouter();
 
     useEffect(() => {
-      if (!auth) {
-        router.push('/login');
-      } else if (allowedRoles && !allowedRoles.includes(auth.role)) {
-        router.push('/dashboard');
+      if (!loading) {
+        if (!auth) {
+          router.push('/login');
+        } else if (allowedRoles && !allowedRoles.includes(auth.role)) {
+          router.push('/dashboard');
+        }
       }
-    }, [auth]);
+    }, [loading, auth, router]);
 
-    if (!auth) return null;
-    if (allowedRoles && !allowedRoles.includes(auth.role)) return null;
+     if (loading || !auth) {
+      return <div>Loading...</div>; // Or a proper spinner component
+    }
 
-    return <Component {...props} />;
+    return <WrappedComponent {...props} />;
   };
 };

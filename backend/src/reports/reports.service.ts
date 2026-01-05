@@ -143,51 +143,229 @@ export class ReportsService {
     }
   }
 
+  private generateChartPageHtml(title: string, data: any[]): string {
+    const labels = data.map(d => d.categoria);
+    const values = data.map(d => d.porcentaje);
+
+    // Chart.js colors
+    const backgroundColors = [
+      '#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8',
+      '#82ca9d', '#a4de6c', '#d0ed57', '#a4c8e0', '#1a2340'
+    ];
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap');
+          body {
+            font-family: 'Poppins', sans-serif;
+            color: #333;
+            font-size: 11px;
+          }
+          h1 {
+            color: #0a1843;
+            font-weight: 700;
+            text-align: center;
+          }
+          .chart-container {
+            width: 80%;
+            max-width: 600px;
+            margin: 40px auto;
+          }
+        </style>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+      </head>
+      <body>
+        <h1>${title}</h1>
+        <div class="chart-container">
+          <canvas id="myPieChart"></canvas>
+        </div>
+        <script>
+          const ctx = document.getElementById('myPieChart').getContext('2d');
+          new Chart(ctx, {
+            type: 'pie',
+            data: {
+              labels: ${JSON.stringify(labels)},
+              datasets: [{
+                label: 'Distribución',
+                data: ${JSON.stringify(values)},
+                backgroundColor: ${JSON.stringify(backgroundColors)},
+                borderColor: '#fff',
+                borderWidth: 2
+              }]
+            },
+            options: {
+              responsive: true,
+              plugins: {
+                legend: {
+                  position: 'top',
+                },
+                tooltip: {
+                  callbacks: {
+                    label: function(context) {
+                      let label = context.label || '';
+                      if (label) {
+                        label += ': ';
+                      }
+                      if (context.parsed !== null) {
+                        label += context.parsed.toFixed(2) + '%';
+                      }
+                      return label;
+                    }
+                  }
+                }
+              },
+              animation: {
+                duration: 0 // Disable animations to ensure chart is fully rendered
+              }
+            }
+          });
+        </script>
+      </body>
+      </html>
+    `;
+  }
+
+
   private async generateReportPdf(report: any, client: any): Promise<Buffer> {
-    // --- COVER PAGE ---
-      const coverPagePromise = new Promise<Buffer>((resolve, reject) => {
-      const doc = new PDFDocument({ autoFirstPage: false });
-      const buffers: Buffer[] = [];
+    // --- DYNAMIC DATA ---
+    const fecha = new Date(report.fechaInforme);
+    const mes = MONTHS_ES[fecha.getMonth()];
+    const year = fecha.getFullYear();
+    const nombre = client?.profile?.firstname || '';
+    const apellido = client?.profile?.lastname || '';
+    const fullName = `${nombre} ${apellido}`.trim();
 
-      doc.on('data', buffers.push.bind(buffers));
-      doc.on('end', () => resolve(Buffer.concat(buffers)));
-      doc.on('error', reject);
+    // --- LOGO TO BASE64 ---
+    const logoPath = path.join(__dirname, '..', 'common', 'logo-light.png');
+    let logoBase64 = '';
+    if (fs.existsSync(logoPath)) {
+      const logoBuffer = fs.readFileSync(logoPath);
+      logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
+    }
 
-      doc.addPage();
+    // --- COVER PAGE HTML ---
+    const coverPageHtml = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;700&display=swap');
+          body {
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background-color: #f4f7fa;
+          }
+          .cover-container {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 40px;
+            background-color: #0a1843;
+            color: white;
+          }
+          .logo {
+            position: absolute;
+            top: 40px;
+            left: 40px;
+            width: 150px;
+          }
+          h1 {
+            font-size: 48px;
+            font-weight: 700;
+            margin: 0;
+          }
+          h2 {
+            font-size: 32px;
+            font-weight: 300;
+            margin: 10px 0 0 0;
+            color: #e0e0e0;
+          }
+          .footer {
+            padding: 20px;
+            text-align: center;
+            font-size: 14px;
+            color: #555;
+          }
+        </style>
+      </head>
+      <body>
+        ${logoBase64 ? `<img src="${logoBase64}" class="logo">` : ''}
+        <div class="cover-container">
+          <h1>Análisis de Cartera</h1>
+          <h2>${fullName}</h2>
+        </div>
+        <div class="footer">
+          ${mes.charAt(0).toUpperCase() + mes.slice(1)} ${year}
+        </div>
+      </body>
+      </html>
+    `;
 
-      // Logo
-      const logoPath = path.join(__dirname, '..', 'common', 'logo.png');
-      if (fs.existsSync(logoPath)) {
-        doc.image(logoPath, 50, 40, { width: 120 });
+    const contentPageStyles = `
+      @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap');
+      body {
+        font-family: 'Poppins', sans-serif;
+        color: #333; /* Dark grey for text */
+        font-size: 11px;
       }
+      h1, h2, h3, h4 {
+        color: #0a1843; /* Main blue for headings */
+        font-weight: 700;
+      }
+    `;
 
-      // Title
-      const fecha = new Date(report.fechaInforme);
-      const mes = MONTHS_ES[fecha.getMonth()];
-      const year = fecha.getFullYear();
-      const nombre = client?.profile?.firstname || '';
-      const apellido = client?.profile?.lastname || '';
-      const fullName = `${nombre} ${apellido}`.trim();
+    // --- WRAP HTML CONTENT WITH STYLES ---
+    const styledResumenGlobalHtml = `
+      <!DOCTYPE html>
+      <html><head><style>${contentPageStyles}</style></head>
+      <body>${report.resumenGlobal}</body></html>
+    `;
 
-      doc.fontSize(28)
-        .fillColor('#0a1843ff')
-        .text(`Análisis ${mes} ${year}`, { align: 'left' });
+    const styledResumenTailoredHtml = `
+      <!DOCTYPE html>
+      <html><head><style>${contentPageStyles}</style></head>
+      <body>${report.resumenTailored}</body></html>
+    `;
+    let childDistributionChartHtml = '';
+    if (report.child_distribution && report.child_distribution.length > 0) {
+      childDistributionChartHtml = this.generateChartPageHtml(
+        'Distribución de Activos (Hijos)',
+        report.child_distribution
+      );
+    }
 
-      doc.moveDown();
-      doc.fontSize(22)
-        .fillColor('#0a1843ff')
-        .text(`${fullName}`, 200, 120, { align: 'left' });
+    const distributionChartHtml = this.generateChartPageHtml(
+      'Distribución de Activos',
+      report.distribution
+    );
 
-      doc.end();
-    });
+    // --- GENERATE ALL PDF PARTS IN PARALLEL ---
+    const pdfPromises = [
+      this.generatePdfFromHtml(coverPageHtml),
+      this.generatePdfFromHtml(distributionChartHtml),
+      this.generatePdfFromHtml(styledResumenGlobalHtml),
+      this.generatePdfFromHtml(styledResumenTailoredHtml),
+    ];
 
-    const [coverPageBuffer, resumenGlobalBuffer, resumenTailoredBuffer] = await Promise.all([
-      coverPagePromise,
-      this.generatePdfFromHtml(report.resumenGlobal),
-      this.generatePdfFromHtml(report.resumenTailored),
-    ]);
+    if (childDistributionChartHtml) {
+      pdfPromises.splice(2, 0, this.generatePdfFromHtml(childDistributionChartHtml));
+    }
 
-    return this.mergePdfBuffers([coverPageBuffer, resumenGlobalBuffer, resumenTailoredBuffer]);
+    const pdfBuffers = await Promise.all(pdfPromises);
+
+    // --- MERGE AND RETURN ---
+    return this.mergePdfBuffers(pdfBuffers);
   }
 
   async getReports() {
