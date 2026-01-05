@@ -2,7 +2,7 @@ import axios from 'axios';
 import { toast } from 'react-toastify'; // Or your preferred notification library
 
 const api = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL,
+  baseURL: process.env.NEXT_PUBLIC_API_URL || '/api',
 });
 
 // Function to handle logout logic
