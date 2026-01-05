@@ -95,13 +95,15 @@ export class ReportsService {
     return Buffer.from(await mergedPdf.save());
   }
 
-  async  generatePdfFromHtml(htmlString: string): Promise<Buffer> {
+  async  generatePdfFromHtml(htmlString: string, footerHtml?: string): Promise<Buffer> {
     try {
       const form = new FormData();
       console.log('Goteberg URL', GOTENBERG_URL);
       // Gotenberg convierte el archivo virtual "index.html"
       form.append('files', Buffer.from(htmlString), 'index.html');
-
+      if (footerHtml) {
+        form.append('files', Buffer.from(footerHtml), 'footer.html');
+      }
       // Opciones de formato (puedes tipar esto en una interfaz si varía mucho)
       form.append('marginTop', '0.4');
       form.append('marginBottom', '0.4');
@@ -228,7 +230,6 @@ export class ReportsService {
     `;
   }
 
-
   private async generateReportPdf(report: any, client: any): Promise<Buffer> {
     // --- DYNAMIC DATA ---
     const fecha = new Date(report.fechaInforme);
@@ -246,6 +247,66 @@ export class ReportsService {
       logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
     }
 
+    const footerHtml = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <style>
+          body {
+            font-family: 'Poppins', sans-serif;
+            font-size: 9px;
+            color: #999; /* Dimmed the text color */
+            width: 100%;
+            margin: 0 20px;
+            text-align: center; /* Center all text by default */
+          }
+          .footer-container {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+          }
+          .line {
+            width: 90%;
+            height: 1px;
+            margin-bottom: 8px;
+            /* Fading gold line using a gradient background */
+            background: linear-gradient(to right, transparent, #bfa14a 50%, transparent);
+          }
+          .contact-info {
+            margin-bottom: 4px;
+          }
+          .contact-info span {
+            margin: 0 10px; /* Add space between email and phone */
+          }
+          .motto {
+            font-weight: 700;
+            color: #0a1843;
+            letter-spacing: 0.5px;
+            opacity: 0.8; /* Slightly dim the motto as well */
+          }
+          .page-number {
+            position: absolute;
+            right: 0;
+            color: #aaa;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="footer-container">
+          <div class="line"></div>
+          <div class="contact-info">
+            <span>email: info@iacapital.ch</span>
+            <span>tel: +41 799223329</span>
+          </div>
+          <div class="motto">
+            TU CONFIANZA ES NUESTRA RESPONSABILIDAD
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
     // --- COVER PAGE HTML ---
     const coverPageHtml = `
       <!DOCTYPE html>
@@ -318,10 +379,21 @@ export class ReportsService {
         font-family: 'Poppins', sans-serif;
         color: #333; /* Dark grey for text */
         font-size: 11px;
+        line-height: 1.6; /* Improves readability */
       }
       h1, h2, h3, h4 {
         color: #0a1843; /* Main blue for headings */
         font-weight: 700;
+      }
+      p {
+        /* This adds the "sangria" (indentation) to the first line of each paragraph */
+        text-indent: 2em; 
+        
+        /* Optional: Justifies the text for a cleaner, block-like appearance */
+        text-align: justify; 
+        
+        /* Optional: Ensures paragraphs don't start right at the top of a new page if possible */
+        page-break-inside: avoid; 
       }
     `;
 
@@ -353,9 +425,9 @@ export class ReportsService {
     // --- GENERATE ALL PDF PARTS IN PARALLEL ---
     const pdfPromises = [
       this.generatePdfFromHtml(coverPageHtml),
-      this.generatePdfFromHtml(distributionChartHtml),
-      this.generatePdfFromHtml(styledResumenGlobalHtml),
-      this.generatePdfFromHtml(styledResumenTailoredHtml),
+      this.generatePdfFromHtml(distributionChartHtml, footerHtml),
+      this.generatePdfFromHtml(styledResumenGlobalHtml, footerHtml),
+      this.generatePdfFromHtml(styledResumenTailoredHtml, footerHtml),
     ];
 
     if (childDistributionChartHtml) {
