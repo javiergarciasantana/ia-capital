@@ -6,7 +6,9 @@ import { join } from 'path';
 import { ValidationPipe } from '@nestjs/common';
 import { ApiKeyGuard } from './common/guards/api-key.guard';
 import { ConfigService } from '@nestjs/config';
+import * as dotenv from 'dotenv';
 
+dotenv.config();
 
 function parseOrigins(): string[] {
   const list = [

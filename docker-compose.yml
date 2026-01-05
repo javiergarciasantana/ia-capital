@@ -22,6 +22,21 @@ services:
     volumes:
       - ./ollama:/root/.ollama
 
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    container_name: ia-gotenberg
+    restart: always
+    # We expose port 3000. 
+    # Left side is your PC/Server port, Right side is container port.
+    ports:
+      - "3080:3080"
+    # Command arguments (Optional): 
+    # These are defaults, but good to know if you need to increase timeout for big PDFs
+    command:
+      - "gotenberg"
+      - "--api-port=3080"
+      - "--api-timeout=30s"
+
   backend:
     build:
       context: ./backend

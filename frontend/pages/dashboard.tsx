@@ -1102,7 +1102,7 @@ const UserReportsDashboard = ({
   CardStyle,
   formatDate,
 }: any) => {
-  
+
   const [userReports, setUserReports] = useState<ReportData[]>([]);
   const [userHistory, setUserHIstory] = useState<ReportData[]>([]);
   const [loading, setLoading] = useState(false);
@@ -1487,7 +1487,7 @@ const UserReportsDashboard = ({
 if (auth.role === 'client') {
   return (
     <div className="dashboard-container" style={{ background: '#f8fafc', minHeight: '100vh', paddingBottom: 60 }}>
-      <Header variant="dashboard" title="Panel Personal" />
+      <Header variant="dashboard" title="" />
       <UserReportsDashboard
         auth={auth}
         API_BASE={API_BASE}

@@ -8,10 +8,16 @@ import { Distribution } from './distribution.entity';
 import { ChildDistribution } from './child-distribution.entity';
 import { UsersService } from 'src/users/users.service';
 
+import { PDFDocument as PDFLibDocument } from 'pdf-lib';
 import * as PDFDocument from 'pdfkit';
+
 import * as path from 'path';
+import axios from 'axios';
 import * as fs from 'fs';
 
+const FormData = require('form-data'); // Usa esto
+
+const GOTENBERG_URL = process.env.GOTENBERG_URL || 'http://gotenberg:3080';
 
 const MONTHS_ES = [
   'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
@@ -79,17 +85,74 @@ export class ReportsService {
     return { report: savedReport, pdf: pdfBuffer };
   }
 
+  async mergePdfBuffers(buffers: Buffer[]): Promise<Buffer> {
+    const mergedPdf = await PDFLibDocument.create();
+    for (const buffer of buffers) {
+      const pdf = await PDFLibDocument.load(buffer);
+      const pages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
+      pages.forEach(page => mergedPdf.addPage(page));
+    }
+    return Buffer.from(await mergedPdf.save());
+  }
+
+  async  generatePdfFromHtml(htmlString: string): Promise<Buffer> {
+    try {
+      const form = new FormData();
+
+      // Gotenberg convierte el archivo virtual "index.html"
+      form.append('files', Buffer.from(htmlString), 'index.html');
+
+      // Opciones de formato (puedes tipar esto en una interfaz si varía mucho)
+      form.append('marginTop', '0.4');
+      form.append('marginBottom', '0.4');
+      form.append('marginLeft', '0.4');
+      form.append('marginRight', '0.4');
+      form.append('paperWidth', '8.27');  // A4
+      form.append('paperHeight', '11.7'); // A4
+
+      // Petición a Gotenberg
+      // Especificamos <Buffer> en AxiosResponse para que TS sepa qué devuelve .data
+      const response = await axios.post(
+        `${GOTENBERG_URL}/forms/chromium/convert/html`,
+        form,
+        {
+          headers: {
+            ...form.getHeaders(),
+          },
+          responseType: 'arraybuffer'
+        }
+      );
+
+      return response.data as Buffer;
+
+    } catch (error: unknown) {
+      // FIX: Cast error to 'any' to bypass the "unknown" and "isAxiosError" checks
+      const err = error as any;
+
+      if (err.response) {
+        console.error('Error de Gotenberg status:', err.response.status);
+        if (err.response.data) {
+            // Convert buffer to string to see the error message
+            console.error('Detalle:', err.response.data.toString());
+        }
+      } else {
+        console.error('Error inesperado:', err.message || err);
+      }
+      
+      throw new Error('No se pudo generar el PDF');
+    }
+  }
+
   private async generateReportPdf(report: any, client: any): Promise<Buffer> {
-    return new Promise((resolve, reject) => {
+    // --- COVER PAGE ---
+      const coverPagePromise = new Promise<Buffer>((resolve, reject) => {
       const doc = new PDFDocument({ autoFirstPage: false });
       const buffers: Buffer[] = [];
 
       doc.on('data', buffers.push.bind(buffers));
-      doc.on('end', () => {
-        resolve(Buffer.concat(buffers));
-      });
+      doc.on('end', () => resolve(Buffer.concat(buffers)));
+      doc.on('error', reject);
 
-      // --- COVER PAGE ---
       doc.addPage();
 
       // Logo
@@ -107,28 +170,24 @@ export class ReportsService {
       const fullName = `${nombre} ${apellido}`.trim();
 
       doc.fontSize(28)
-        .fillColor('#1a2340')
-        .text(`${fullName}`, 200, 120, { align: 'left' });
+        .fillColor('#0a1843ff')
+        .text(`Análisis ${mes} ${year}`, { align: 'left' });
 
       doc.moveDown();
       doc.fontSize(22)
-        .fillColor('#bfa14a')
-        .text(`Análisis ${mes} ${year}`, { align: 'left' });
-
-      // --- RESUMEN GLOBAL ---
-      doc.addPage();
-      doc.fontSize(18).fillColor('#1a2340').text('Resumen Global', { underline: true });
-      doc.moveDown();
-      doc.fontSize(12).fillColor('#222').text(report.resumenGlobal || 'Sin resumen global.');
-
-      // --- RESUMEN TAILORED ---
-      doc.addPage();
-      doc.fontSize(18).fillColor('#1a2340').text('Resumen Personalizado', { underline: true });
-      doc.moveDown();
-      doc.fontSize(12).fillColor('#222').text(report.resumenTailored || 'Sin resumen personalizado.');
+        .fillColor('#0a1843ff')
+        .text(`${fullName}`, 200, 120, { align: 'left' });
 
       doc.end();
     });
+
+    const [coverPageBuffer, resumenGlobalBuffer, resumenTailoredBuffer] = await Promise.all([
+      coverPagePromise,
+      this.generatePdfFromHtml(report.resumenGlobal),
+      this.generatePdfFromHtml(report.resumenTailored),
+    ]);
+
+    return this.mergePdfBuffers([coverPageBuffer, resumenGlobalBuffer, resumenTailoredBuffer]);
   }
 
   async getReports() {
