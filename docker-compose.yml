@@ -26,8 +26,6 @@ services:
     image: gotenberg/gotenberg:8
     container_name: ia-gotenberg
     restart: always
-    # We expose port 3000. 
-    # Left side is your PC/Server port, Right side is container port.
     ports:
       - "3080:3080"
     # Command arguments (Optional): 

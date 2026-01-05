@@ -98,7 +98,7 @@ export class ReportsService {
   async  generatePdfFromHtml(htmlString: string): Promise<Buffer> {
     try {
       const form = new FormData();
-
+      console.log('Goteberg URL', GOTENBERG_URL);
       // Gotenberg convierte el archivo virtual "index.html"
       form.append('files', Buffer.from(htmlString), 'index.html');
 
