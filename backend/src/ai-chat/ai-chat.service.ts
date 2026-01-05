@@ -5,7 +5,7 @@ import { Repository } from 'typeorm';
 import { Conversation } from './entities/conversation.entity';
 import { Message } from './entities/message.entity';
 import { OllamaClient } from './ollama.client';
-import { UserFactsService } from './user-facts.service';
+import { UserFactsService, Facts } from './user-facts.service'; // Added Facts type
 import { UsersService } from 'src/users/users.service';
 
 type Role = 'system' | 'user' | 'assistant';
@@ -16,10 +16,14 @@ export class AiChatService {
     @InjectRepository(Conversation) private convRepo: Repository<Conversation>,
     @InjectRepository(Message) private msgRepo: Repository<Message>,
     private readonly ollama: OllamaClient,
-    private readonly facts: UserFactsService,
+    private readonly factsService: UserFactsService, // Renamed for clarity
     private readonly usersService: UsersService,
-
   ) { }
+
+  // Helper for formatting currency locally in the chat service
+  private formatCurrency(val: number) {
+    return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(val);
+  }
 
   // ========= conversación =========
   async getOrCreateConversation(userId: number) {
@@ -51,8 +55,8 @@ export class AiChatService {
         'Sé breve: 1–3 frases; usa listas solo si aporta claridad.',
         'No inventes datos ni fechas: responde únicamente con los HECHOS proporcionados por el sistema. Si falta información, dilo explícitamente.',
         'No repitas palabras ni frases.',
-        'Respeta el alcance del usuario autenticado y los documentos generales.',
-        'Nunca digas el número de cliente o usuario, siempre refiérete a los usuarios por su nombre'
+        'Respeta el alcance del usuario autenticado.',
+        'Nunca digas números de ID internos.'
       ],
     };
   }
@@ -67,84 +71,93 @@ export class AiChatService {
     return s.trim();
   }
 
-  // ========= intent router (respuestas determinísticas) =========
-  private tryRouteIntent(question: string, factsText: string) {
+  // ========= intent router (respuestas determinísticas usando el objeto Facts) =========
+  private tryRouteIntent(question: string, facts: Facts) {
     const q = question.toLowerCase();
+    const isAdmin = facts.role === 'admin';
 
     // 1) Consultas Financieras Rápidas (Patrimonio / AUM)
-    // Matches: "cuanto dinero hay", "patrimonio total", "total aum", "valor de la cartera"
     if (/(patrimonio|dinero|aum|valor).*(total|actual|global)/i.test(q)) {
-      // Intento ADMIN: Busca "AUM Total" en el bloque de resumen global
-      const globalLine = factsText.match(/AUM Total.*: ([\d.,€$ ]+)/i);
-      if (globalLine) return { answer: `El AUM Total bajo gestión de la firma es de ${globalLine[1]}.` };
-
-      // Intento CLIENTE: Busca "Patrimonio:" en el informe más reciente
-      // El regex busca la línea que suele tener formato: "[Fecha] Patrimonio: X"
-      const clientLine = factsText.match(/Patrimonio: ([\d.,€$ ]+)/i);
-      if (clientLine) return { answer: `Según tu informe más reciente, tu patrimonio total es de ${clientLine[1]}.` };
-    }
-
-    // 2) Consultas de Deuda
-    // Matches: "tengo deuda", "cuál es el pasivo", "debt"
-    if (/(deuda|pasivo|debt).*(total|actual)/i.test(q)) {
-      // Intento ADMIN
-      const adminDebt = factsText.match(/Deuda Total.*: (-?[\d.,€$ ]+)/i);
-      if (adminDebt) return { answer: `La deuda total agregada de la firma es de ${adminDebt[1]}.` };
-
-      // Intento CLIENTE
-      const clientDebt = factsText.match(/Deuda: (-?[\d.,€$ ]+)/i);
-      if (clientDebt) return { answer: `Tu deuda registrada actual es de ${clientDebt[1]}.` };
-    }
-
-    // 3) Consultas de Rendimiento / Retorno
-    // Matches: "como va la cartera", "rendimiento ytd", "beneficio anual"
-    if (/(rendimiento|retorno|beneficio|ytd|rentabilidad)/i.test(q)) {
-      // Intento ADMIN
-      const adminYtd = factsText.match(/Rendimiento Promedio YTD: ([\d.,% \-]+)/i);
-      if (adminYtd) return { answer: `El rendimiento promedio YTD global es del ${adminYtd[1]}.` };
-
-      // Intento CLIENTE
-      const clientYtd = factsText.match(/Retorno YTD: ([\d.,% \-]+)/i);
-      if (clientYtd) return { answer: `Tu rendimiento acumulado anual (YTD) es del ${clientYtd[1]}.` };
-    }
-
-    // 4) Consultas específicas por Banco (Logic preserved from previous version but cleaned up)
-    const mBank = q.match(/(banco|bank|entidad)\s+([a-záéíóúüñ .\-]+)/i);
-    if (mBank) {
-      const bankNameQuery = mBank[2].trim(); // ej: "Santander"
-      // Buscamos en el texto si aparece "Santander: €XXXX" (formato nuevo de UserFactsService)
-      // O buscamos en el resumen narrativo si se menciona.
-      // Dado que UserFactsService ahora pone "Bancos: BBVA: €..., Santander: €..."
-      const bankRegex = new RegExp(`${bankNameQuery}.*?([\\d.,€$]+)`, 'i');
-      const bankMatch = factsText.match(bankRegex);
-      
-      if (bankMatch) {
-         return { answer: `La posición registrada para ${bankNameQuery} es de ${bankMatch[1]}.` };
+      if (isAdmin && facts.globalMetrics) {
+        return { answer: `El AUM Total bajo gestión de la firma es de ${this.formatCurrency(facts.globalMetrics.totalAUM)}.` };
+      }
+      if (!isAdmin && facts.latestReport) {
+        return { answer: `Según tu informe más reciente (${this.formatDate(facts.latestReport.fechaInforme)}), tu patrimonio total es de ${this.formatCurrency(facts.latestReport.kpis.totalPatrimony)}.` };
       }
     }
 
-    // 5) Último documento (general)
+    // 2) Consultas de Deuda
+    if (/(deuda|pasivo|debt).*(total|actual)/i.test(q)) {
+      if (isAdmin && facts.globalMetrics) {
+        return { answer: `La deuda total agregada de la firma es de ${this.formatCurrency(facts.globalMetrics.totalDebt)}.` };
+      }
+      if (!isAdmin && facts.latestReport) {
+        return { answer: `Tu deuda registrada actual es de ${this.formatCurrency(facts.latestReport.kpis.debt)}.` };
+      }
+    }
+
+    // 3) Consultas de Rendimiento / Retorno
+    if (/(rendimiento|retorno|beneficio|ytd|rentabilidad)/i.test(q)) {
+      if (isAdmin && facts.globalMetrics) {
+        return { answer: `El rendimiento promedio YTD global de los clientes activos es del ${facts.globalMetrics.avgReturn}.` };
+      }
+      if (!isAdmin && facts.latestReport) {
+        return { answer: `Tu rendimiento acumulado anual (YTD) es del ${facts.latestReport.kpis.ytdReturn}.` };
+      }
+    }
+
+    // 4) Consultas de Facturas (Nuevo)
+    if (/(factura|cobro|pago|invoice)/i.test(q)) {
+        // Buscamos facturas en los reportes cargados
+        const invoices = facts.reports.flatMap(r => r.invoices || []);
+        if (invoices.length > 0) {
+            const lastInv = invoices[0]; // Asumimos ordenados o tomamos el primero
+            return { answer: `La última factura registrada es la #${lastInv.id} del ${lastInv.fechaFactura} por un importe de ${lastInv.importe}€.`};
+        }
+        return { answer: "No he encontrado facturas recientes en los informes disponibles." };
+    }
+
+    // 5) Consultas específicas por Banco (Logic preserved but using Data Structure)
+    const mBank = q.match(/(banco|bank|entidad)\s+([a-záéíóúüñ .\-]+)/i);
+    if (mBank) {
+      const bankNameQuery = mBank[2].trim().toLowerCase(); 
+      // Buscar en el último reporte disponible
+      if (facts.latestReport?.kpis.bankBreakdown) {
+         // bankBreakdown es array strings: ["Santander: 100€", "BBVA: 200€"]
+         const match = facts.latestReport.kpis.bankBreakdown.find(b => b.toLowerCase().includes(bankNameQuery));
+         if (match) {
+             return { answer: `Según el último informe, tu posición en ${match}.` };
+         }
+      }
+    }
+
+    // 6) Último documento (general)
     if (/(ultimo|más reciente|mas reciente).*(documento|informe)/i.test(q)) {
-      // El UserFactsService pone primero el informe más reciente con fecha
-      const firstReportLine = factsText.match(/\[(\d{1,2}\/\d{1,2}\/\d{4})\]/);
-      if (firstReportLine) {
-        return { answer: `El informe más reciente disponible es del ${firstReportLine[1]}.` };
+      if (facts.latestReport) {
+        return { answer: `El informe más reciente disponible es del ${this.formatDate(facts.latestReport.fechaInforme)}.` };
       }
     }
 
     return null; // Si no hay match directo, dejamos que Ollama genere la respuesta
   }
 
+  // Helper date formatter
+  private formatDate(iso: string) {
+      return new Date(iso).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' });
+  }
+
   // ========= system + HECHOS =========
   private async buildSystemMessages(user: { id: number; email: string; role: string; name: string }) {
     const persona = this.buildPersona();
-    // UserFactsService ahora devuelve una estructura rica (Facts)
-    const f = await this.facts.buildFacts({ id: user.id, role: user.role });
-    // Convertimos esa estructura a texto formateado para el prompt
-    const factsText = this.facts.factsToPromptText(f);
-    const fullUser = await this.usersService.findById(user.id);
-    console.log("username", fullUser.profile?.firstName);
-    const userLabel = fullUser.profile?.firstName 
+    
+    // 1. Obtenemos la estructura rica de datos (Facts)
+    const facts: Facts = await this.factsService.buildFacts({ id: user.id, role: user.role });
+    
+    // 2. Convertimos esa estructura a texto formateado para el contexto del LLM
+    const factsText = this.factsService.factsToPromptText(facts);
+    
+    // 3. Obtenemos nombre de usuario directamente de los Facts (evitamos llamada extra a DB)
+    const userLabel = facts.userProfile?.firstName || user.name || 'Usuario';
 
     const system: Array<{ role: Role; content: string }> = [
       {
@@ -157,7 +170,8 @@ export class AiChatService {
       },
       {
         role: 'system',
-        content: `Usuario autenticado: ${userLabel} (Rol: ${user.role}, Nombre: ${userLabel}).`,      },
+        content: `Usuario autenticado: ${userLabel} (Rol: ${user.role}).`,      
+      },
       {
         role: 'system',
         content: factsText,
@@ -168,7 +182,8 @@ export class AiChatService {
       },
     ];
 
-    return { system, factsText };
+    // Devolvemos tanto el contexto para Ollama como el objeto Facts puro para el Router
+    return { system, facts };
   }
 
   // ========= chat stream =========
@@ -194,11 +209,13 @@ export class AiChatService {
       content: lastUserMsg.content.slice(0, 2000),
     }));
 
-    // Construir contexto con HECHOS financieros enriquecidos
-    const { system, factsText } = await this.buildSystemMessages(user);
+    // Construir contexto con HECHOS financieros enriquecidos y objeto estructurado
+    const { system, facts } = await this.buildSystemMessages(user);
 
     // ---- ROUTER DE INTENCIONES (respuesta directa SIN LLM si aplica) ----
-    const routed = this.tryRouteIntent(lastUserMsg.content, factsText);
+    // Ahora pasamos el objeto 'facts' completo, no solo el texto
+    const routed = this.tryRouteIntent(lastUserMsg.content, facts);
+    
     if (routed?.answer) {
       const final = this.sanitize(routed.answer);
       yield { type: 'chunk', content: final };
