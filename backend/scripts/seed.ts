@@ -41,6 +41,31 @@ async function seed() {
     console.log('Admin password and profile updated', adminPassword);
   }
 
+  const existingOwner = await usersService.findByEmail('iarcocha@iacapital.ch');
+  if (!existingOwner) {
+    await usersService.create({
+      email: 'iarcocha@iacapital.ch',
+      password: adminPassword,
+      role: 'admin',
+      profile: {
+        firstName: 'Iñaki',
+        lastName: 'Arcocha',
+      },
+    });
+    console.log('Admin creado');
+  } else {
+    // Always update the password for admin
+    await usersService.update(existingOwner.id, { password: adminPassword });
+    // Update profile name and surname if needed
+    await usersService.update(existingOwner.id, {
+      profile: {
+        firstName: 'Iñaki',
+        lastName: 'Arcocha',
+      },
+    });
+    console.log('Admin password and profile updated', adminPassword);
+  }
+
   // Lista de clientes a insertar
   const clients = [
     'gongroup@ia.capital',
