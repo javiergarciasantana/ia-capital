@@ -66,7 +66,7 @@ async function seed() {
     console.log('Admin password and profile updated', adminPassword);
   }
 
-  const existingAssistant = await usersService.findByEmail('iarcocha@iacapital.ch');
+  const existingAssistant = await usersService.findByEmail('psaladeborja@iacapital.ch');
   if (!existingAssistant) {
     await usersService.create({
       email: 'psaladeborja@iacapital.ch',
