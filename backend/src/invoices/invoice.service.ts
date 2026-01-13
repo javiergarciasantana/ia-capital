@@ -192,9 +192,9 @@ export class InvoiceService {
       doc.text(fmt(invoice.importe), 0, rowY, { align: 'right' });
 
       // --- CALCULATION DETAILS (Subtext) ---
-      doc.fillColor('#6b7280').fontSize(8); // Gray text
-      const calcText = `Calculation: Net Worth (${fmt(netWorth)}) x Fee (${(percentage * 100).toFixed(2)}%) x Period Factor (${timeFactor})`;
-      doc.text(calcText, 60, rowY + 15);
+      // doc.fillColor('#6b7280').fontSize(8); // Gray text
+      // const calcText = `Calculation: Net Worth (${fmt(netWorth)}) x Fee (${(percentage * 100).toFixed(2)}%) x Period Factor (${timeFactor})`;
+      // doc.text(calcText, 60, rowY + 15);
 
       // --- TOTAL ---
       const totalY = rowY + 50;
